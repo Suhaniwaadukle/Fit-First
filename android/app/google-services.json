@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "473802444400",
+    "project_id": "fit-first-749cd",
+    "storage_bucket": "fit-first-749cd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:473802444400:android:7211a9a80615886d9e6eb5",
+        "android_client_info": {
+          "package_name": "com.fitfirst.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "473802444400-f1fm5of813apcue3ekeq71ag87r9p2gl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fitfirst.app",
+            "certificate_hash": "1c489cdfdf12d769798f1ab7f7325f202a58d5a8"
+          }
+        },
+        {
+          "client_id": "473802444400-ga78ufnjintglbci4rctg7nvqljnaf1s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnefOsQB__lu8XV-_inSk__o6uogvDleE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "473802444400-ga78ufnjintglbci4rctg7nvqljnaf1s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "473802444400-43pdsv3jl68ncjecrmgdggs8uhqjhis4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fitfirst.appstore"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

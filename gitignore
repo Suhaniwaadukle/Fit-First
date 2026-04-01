@@ -1,0 +1,27 @@
+# Ignore build files
+build/
+*.iml
+*.apk
+*.keystore
+
+# Ignore Gradle caches
+.gradle/
+.gradle-cache/
+.gradle-wrapper/
+.idea/
+*.log
+
+# Ignore Android emulator
+.android/
+*.avd/
+
+# Ignore OS files
+Thumbs.db
+.DS_Store
+
+# Ignore personal and system files
+AppData/
+Local Settings/
+Cookies/
+Temporary Internet Files/
+Documents/

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyDUrQt1YtEPX9g5FjC6PxslTEpg55VNkxA</string>
+	<key>GCM_SENDER_ID</key>
+	<string>473802444400</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.fitfirst.appstore</string>
+	<key>PROJECT_ID</key>
+	<string>fit-first-749cd</string>
+	<key>STORAGE_BUCKET</key>
+	<string>fit-first-749cd.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:473802444400:ios:5be811fca4046c1e9e6eb5</string>
+</dict>
+</plist>
