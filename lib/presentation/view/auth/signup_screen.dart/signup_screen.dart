@@ -636,54 +636,54 @@ class _SignupScreenState extends State<SignupScreen> {
 
                           return Column(
                             children: [
-                              // if (Platform.isAndroid)
-                              //   SizedBox(
-                              //     width: double.infinity,
-                              //     child: ElevatedButton.icon(
-                              //       onPressed: (isGoogleLoading || isRegisterLoading)
-                              //           ? null
-                              //           : _handleGoogleRegister,
-                              //       style: ElevatedButton.styleFrom(
-                              //         backgroundColor: AppColors.kWhite,
-                              //         minimumSize: const Size(double.infinity, 55),
-                              //         side: BorderSide(
-                              //           color: isGoogleLoading
-                              //               ? Colors.grey[400]!
-                              //               : AppColors.kPrimaryColor,
-                              //         ),
-                              //         shape: RoundedRectangleBorder(
-                              //           borderRadius: BorderRadius.circular(16),
-                              //         ),
-                              //         elevation: 0,
-                              //       ),
-                              //       icon: isGoogleLoading
-                              //           ? SizedBox(
-                              //         width: 20,
-                              //         height: 20,
-                              //         child: CircularProgressIndicator(
-                              //           color: AppColors.kPrimaryColor,
-                              //           strokeWidth: 2,
-                              //         ),
-                              //       )
-                              //           : const Icon(
-                              //         FontAwesomeIcons.google,
-                              //         color: AppColors.kBlack,
-                              //       ),
-                              //       label: Text(
-                              //         isGoogleLoading
-                              //             ? 'Signing up with Google...'
-                              //             : 'Register with Google',
-                              //         style: TextStyle(
-                              //           fontSize: 16,
-                              //           fontWeight: FontWeight.w600,
-                              //           color: isGoogleLoading
-                              //               ? Colors.grey[600]
-                              //               : AppColors.kPrimaryColor,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ),
-                              // if (Platform.isIOS)
+                              if (Platform.isAndroid)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: (isGoogleLoading || isRegisterLoading)
+                                        ? null
+                                        : _handleGoogleRegister,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.kWhite,
+                                      minimumSize: const Size(double.infinity, 55),
+                                      side: BorderSide(
+                                        color: isGoogleLoading
+                                            ? Colors.grey[400]!
+                                            : AppColors.kPrimaryColor,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    icon: isGoogleLoading
+                                        ? SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.kPrimaryColor,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                        : const Icon(
+                                      FontAwesomeIcons.google,
+                                      color: AppColors.kBlack,
+                                    ),
+                                    label: Text(
+                                      isGoogleLoading
+                                          ? 'Signing up with Google...'
+                                          : 'Register with Google',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: isGoogleLoading
+                                            ? Colors.grey[600]
+                                            : AppColors.kPrimaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (Platform.isIOS)
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(

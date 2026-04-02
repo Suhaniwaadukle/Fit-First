@@ -14,7 +14,6 @@ import 'package:orka_sports/presentation/view/gym/data/models/gym_food_models.da
 
 @immutable
 class GymEntity {
-  // ✅ ALL EXISTING PROPERTIES
   final bool isPreferrencesLoading;
   final TextEditingController fitnessController;
   final TextEditingController expController;

@@ -128,6 +128,7 @@ class _GymSelectionScreenState extends ConsumerState<GymSelectionScreen> {
                 Icons.location_on, gymProvider, gymState),
 
             if (gymState.selectedMembershipOption == 'existing')
+              const SizedBox(height: 10),
               ExistingGymWidget(
                 controller: gymState.searchGymController,
                 onCheckPartnership: () {
@@ -136,6 +137,7 @@ class _GymSelectionScreenState extends ConsumerState<GymSelectionScreen> {
                 gymController: gymProvider,
                 gymEntity: gymState,
               ),
+
             if (gymState.selectedMembershipOption == 'looking')
               NearbyGymsWidget(
                 gymController: gymProvider,
@@ -145,7 +147,7 @@ class _GymSelectionScreenState extends ConsumerState<GymSelectionScreen> {
                 },
               ),
 
-              buildEnhancedPartnersSection(ref),
+              // buildEnhancedPartnersSection(ref),
           ],
         ),
       ),

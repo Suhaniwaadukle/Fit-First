@@ -498,6 +498,7 @@ class GymResultScreen extends ConsumerWidget {
                                                 ),
                                               );
 
+                                              // --- Location checks ---
                                               bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
                                               if (!serviceEnabled) {
                                                 Navigator.pop(context);
@@ -506,7 +507,6 @@ class GymResultScreen extends ConsumerWidget {
                                                 );
                                                 return;
                                               }
-
 
                                               LocationPermission permission = await Geolocator.checkPermission();
                                               if (permission == LocationPermission.denied) {
@@ -527,9 +527,7 @@ class GymResultScreen extends ConsumerWidget {
                                                 return;
                                               }
 
-
                                               Position position = await Geolocator.getCurrentPosition();
-
 
                                               final prefs = await SharedPreferences.getInstance();
                                               final String? userIdStr = prefs.getString("userId");
@@ -539,9 +537,7 @@ class GymResultScreen extends ConsumerWidget {
                                               }
                                               int userId = int.tryParse(userIdStr) ?? 0;
 
-
                                               String currentDay = DateFormat('EEEE').format(DateTime.now());
-
 
                                               final data = {
                                                 "user_id": userId,
@@ -550,18 +546,14 @@ class GymResultScreen extends ConsumerWidget {
                                                 "longitude": position.longitude,
                                               };
 
-
                                               print("Mark complete request: $data");
-
 
                                               final response = await Dio().post(
                                                 "https://fitfirst.online/Api/markWorkoutComplete",
                                                 data: data,
                                               );
 
-
                                               Navigator.pop(context);
-
 
                                               final respData = response.data;
                                               if (respData["status"] == "success") {
@@ -571,8 +563,43 @@ class GymResultScreen extends ConsumerWidget {
                                                     backgroundColor: Colors.green,
                                                   ),
                                                 );
-                                                
+
                                                 schedulerController.onRefreshGymSchedule(context);
+
+                                                // --- Show Personalized Plan popup after marking complete ---
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    title: Text("🎉 Workout Completed!"),
+                                                    content: Text("Get your Diet Plan unlocked now!"),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () async {
+                                                          Navigator.pop(context);
+
+                                                          // Get dosha info from provider
+                                                          String doshaResult = "vata";
+                                                          final bodyIqState = ref.read(DiProviders.bodyIqControllerProvider);
+                                                          final doshaResultModel = bodyIqState.getDoshaResultModel;
+                                                          if (doshaResultModel?.dominantDosha != null) {
+                                                            doshaResult = doshaResultModel!.dominantDosha!.toLowerCase();
+                                                          }
+
+                                                          // Navigate to GymPersonalizedPlanScreen
+                                                          CustomSmoothNavigator.push(
+                                                            context,
+                                                            GymPersonalizedPlanScreen(
+                                                              userId: userIdStr,
+                                                              doshaResult: doshaResult,
+                                                              foodType: 2,
+                                                            ),
+                                                          );
+                                                        },
+                                                        child: Text("Unlock Diet Plan"),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
                                               } else {
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(
@@ -598,8 +625,6 @@ class GymResultScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 24),
 
-
-                          // ✅ WORKOUT BUDDIES SECTION (FIXED)
                           Text("Workout Buddies",
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 16)),
                           AppSize.kHeight15,
@@ -630,12 +655,8 @@ class GymResultScreen extends ConsumerWidget {
                           Consumer(
                             builder: (context, ref, child) {
                               final gymState = ref.watch(DiProviders.gymControllerProvider);
-                              
-                              print("🔍 DEBUG: isGymCodeVerified = ${gymState.isGymCodeVerified}");
-                              
-                              // Show locked state if not verified
+
                               if (!gymState.isGymCodeVerified) {
-                                print("🔒 Showing locked state");
                                 return Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(16),
@@ -669,79 +690,25 @@ class GymResultScreen extends ConsumerWidget {
                                   ),
                                 );
                               }
-                              
-                              print("✅ Showing active button");
-                              
-                              // Show active button if verified
+
                               return SizedBox(
                                 width: double.infinity,
                                 child: ButtonWidget(
-                                  text: "Get My Personalised Plan",
+                                  text: "Get My Personalized Plan",
                                   borderRadius: BorderRadius.circular(15),
                                   backgroundColor: WidgetStatePropertyAll(AppColors.kWhite),
                                   side: BorderSide(color: AppColors.kPrimaryColor),
                                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: AppColors.kPrimaryColor, 
-                                    fontWeight: FontWeight.bold
+                                    color: AppColors.kPrimaryColor,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  onPressed: () async {
-                                    print("✅ Button clicked! Starting personalised plan process...");
-                                    
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (context) => Center(
-                                        child: CircularProgressIndicator(color: AppColors.kPrimaryColor),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Complete your first workout to unlock the Diet Plan!"),
+                                        backgroundColor: Colors.orange,
                                       ),
                                     );
-
-                                    try {
-                                      final prefs = await SharedPreferences.getInstance();
-                                      final String userId = prefs.getString("userId") ?? "";
-                                      
-                                      print("User ID: $userId");
-                                      
-                                      if (userId.isEmpty) {
-                                        throw Exception("User not logged in");
-                                      }
-
-                                      String doshaResult = "vata";
-                                      
-                                      final bodyIqState = ref.read(DiProviders.bodyIqControllerProvider);
-                                      final doshaResultModel = bodyIqState.getDoshaResultModel;
-                                      
-                                      if (doshaResultModel?.dominantDosha != null) {
-                                        doshaResult = doshaResultModel!.dominantDosha!.toLowerCase();
-                                        print("Dosha retrieved from model: $doshaResult");
-                                      } else {
-                                        print("Using fallback dosha value: $doshaResult");
-                                      }
-                                      
-                                      Navigator.pop(context);
-                                      
-                                      print("✅ Navigating to GymPersonalizedPlanScreen...");
-                                      
-                                      CustomSmoothNavigator.push(
-                                        context, 
-                                        GymPersonalizedPlanScreen(
-                                          userId: userId,
-                                          doshaResult: doshaResult,
-                                          foodType: 2,
-                                        )
-                                      );
-                                      
-                                    } catch (e) {
-                                      Navigator.pop(context);
-                                      
-                                      print("❌ Error: $e");
-                                      
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: AppColors.kRed,
-                                        ),
-                                      );
-                                    }
                                   },
                                 ),
                               );

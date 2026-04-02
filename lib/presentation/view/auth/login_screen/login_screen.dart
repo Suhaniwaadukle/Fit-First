@@ -301,28 +301,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 32),
                           Row(children: [Expanded(child: Divider(color: Colors.grey, thickness: 1))]),
                           const SizedBox(height: 16),
-                          // ElevatedButton.icon(
-                          //   onPressed: _isGoogleLoading ? null : _handleGoogleRegister,
-                          //   label: const Text(
-                          //     'Register with Google',
-                          //     style: TextStyle(
-                          //       fontSize: 16,
-                          //       fontWeight: FontWeight.w600,
-                          //       color: AppColors.kPrimaryColor,
-                          //     ),
-                          //   ),
-                          //   icon: const Icon(FontAwesomeIcons.google, color: AppColors.kBlack),
-                          //   style: ElevatedButton.styleFrom(
-                          //     backgroundColor: AppColors.kWhite,
-                          //     minimumSize: const Size(double.infinity, 55),
-                          //     side: const BorderSide(color: AppColors.kPrimaryColor),
-                          //     shape: RoundedRectangleBorder(
-                          //       borderRadius: BorderRadius.circular(16),
-                          //     ),
-                          //     elevation: 0,
-                          //   ),
-                          // ),
-                          // const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _isGoogleLoading ? null : _handleGoogleRegister,
+                            label: const Text(
+                              'Register with Google',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.kPrimaryColor,
+                              ),
+                            ),
+                            icon: const Icon(FontAwesomeIcons.google, color: AppColors.kBlack),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.kWhite,
+                              minimumSize: const Size(double.infinity, 55),
+                              side: const BorderSide(color: AppColors.kPrimaryColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton.icon(
                             onPressed: _handleAppleRegister,
                             label: const Text(

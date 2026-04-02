@@ -441,11 +441,10 @@ Future<void> addSelectedGymFoodToMeal({
     meal: meal,
     selectedItems: selectedItems,
     day: day,
-    forceReplace: false, // ✅ INITIAL CALL WITH FALSE
+    forceReplace: false,
   );
 }
 
-// ✅ NEW PRIVATE METHOD TO HANDLE THE CONDITIONAL LOGIC
 Future<void> _addGymFoodWithConflictHandling({
   required BuildContext context,
   required String userId,
