@@ -10,14 +10,21 @@ class SearchGymModel {
   });
 
   factory SearchGymModel.fromJson(Map<String, dynamic> json) {
+
+    // API kabhi data bhejti hai kabhi partners
+    final gymList = json['data'] ?? json['partners'];
+
     return SearchGymModel(
       status: json['status'],
-      data: json['data'] != null ? List<SearchGymData>.from(json['data'].map((x) => SearchGymData.fromJson(x))) : [],
+      data: gymList != null
+          ? List<SearchGymData>.from(
+        gymList.map((x) => SearchGymData.fromJson(x)),
+      )
+          : [],
       message: json['message'],
     );
   }
 }
-
 class SearchGymData {
   final String? id;
   final String? userId;

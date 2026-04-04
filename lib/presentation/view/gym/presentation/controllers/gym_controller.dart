@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
@@ -35,6 +36,7 @@ class GymController extends StateNotifier<GymEntity> {
   final SharedPreferences prefs = GetItService.getIt<SharedPreferences>();
   final CommonFormatter formatter = CommonFormatter();
 
+  // Function for reset gym
   void resetGym() {
     state = GymEntity.initial();
   }
@@ -44,6 +46,7 @@ class GymController extends StateNotifier<GymEntity> {
     NavigationWidget.commonNavigation(context: context, route: AppRoutesConstants.basicGymInfo);
   }
 
+  // Function to get the goal prefferences.
   Future<void> getGoalsPref(BuildContext context) async {
     try {
       state = state.copyWith(isPreferrencesLoading: true);
@@ -54,7 +57,7 @@ class GymController extends StateNotifier<GymEntity> {
         "communication_style": formatter.checkValue(state.communicationController.text),
         "gender_preference_for_buddy": formatter.checkValue(state.buddyGenderController.text),
       }).then(
-        (value) {
+            (value) {
           log("API Call Success");
           showCustomPopup(
             context,
@@ -93,12 +96,14 @@ class GymController extends StateNotifier<GymEntity> {
     }
   }
 
+  // Function for selecting the grid options in the goals
   void toggleGridSelection(SelectableTileItem item) {
     final updatedItems = [
       ...state.selectedItems.where((i) => i.category != item.category),
       item,
     ];
 
+    // Assign the value to the appropriate controller
     switch (item.category) {
       case "Fitness goal":
         state.fitnessController.text = item.title;
@@ -118,6 +123,7 @@ class GymController extends StateNotifier<GymEntity> {
     }
 
     state = state.copyWith(selectedItems: updatedItems);
+    // Log all controller values
     log("Controller values after selection:");
     log("Fitness Goal: ${state.fitnessController.text}");
     log("Experience Level: ${state.expController.text}");
@@ -126,6 +132,7 @@ class GymController extends StateNotifier<GymEntity> {
     log("Buddy Status: ${state.buddyStatusController.text}");
   }
 
+  // Function to clear the controllers
   void clearGridSelection() {
     state = state.copyWith(selectedItems: []);
     state.fitnessController.clear();
@@ -135,21 +142,31 @@ class GymController extends StateNotifier<GymEntity> {
     state.buddyStatusController.clear();
   }
 
+  // Functions for gym selection-------------------------------------------------------------
+
   Future<void> searchGymFn(BuildContext context) async {
     try {
       state = state.copyWith(isSearchGymLoading: true);
+
       final value = await _gymRepo.searchGymRepo(data: {
         "user_id": prefs.getString("userId"),
         "name": formatGymName(formatter.checkValue(state.searchGymController.text)),
       });
+
+      // ✅ DEBUG LOGS
+      log("API status: ${value.status}");
+      log("API message: ${value.message}");
+      log("Gym list length: ${value.data?.length}");
+      log("Gym list data: ${value.data}");
+
       if (value.status == "success") {
         log("Successfully got the searched gym $value");
         state = state.copyWith(searchGymList: value);
-      }
-      else {
-        // API responded with status = error (e.g. no gym within 5 km)
+      } else {
         log("Gym search error response: ${value.message}");
+
         state = state.copyWith(searchGymList: value);
+
         showCustomPopup(
           context,
           title: "No gyms found",
@@ -160,7 +177,6 @@ class GymController extends StateNotifier<GymEntity> {
           onCancelPressed: null,
         );
       }
-
     } catch (e) {
       showCustomPopup(
         context,
@@ -176,6 +192,7 @@ class GymController extends StateNotifier<GymEntity> {
     }
   }
 
+  // Function to get near gyms.
   Future<void> getNearByGyms(BuildContext context, {required String type}) async {
     try {
       state = state.copyWith(isNearGymLoading: true);
@@ -217,6 +234,7 @@ class GymController extends StateNotifier<GymEntity> {
     }
   }
 
+  // Function to get gym details.
   Future<void> getGymDetails(BuildContext context) async {
     getCoaches(context);
     try {
@@ -226,7 +244,7 @@ class GymController extends StateNotifier<GymEntity> {
       await _gymRepo.getGymDetailsRepo(data: {
         "partner_id": formatter.checkValue(prefs.getString("partnerId")),
       }).then(
-        (value) {
+            (value) {
           log("Success gym details $value");
           state = state.copyWith(
             getGymDetailsList: value,
@@ -250,42 +268,50 @@ class GymController extends StateNotifier<GymEntity> {
     }
   }
 
-Future<void> checkGymVerificationStatus() async {
-  try {
-    final userId = prefs.getString("userId");
-    if (userId == null) return;
+  // Add this method to check gym verification status from server
+  Future<void> checkGymVerificationStatus() async {
+    try {
+      final userId = prefs.getString("userId");
+      if (userId == null) return;
 
-    final response = await _gymRepo.getUserGymMembershipRepo(data: {
-      "user_id": int.parse(userId),
-    });
+      final response = await _gymRepo.getUserGymMembershipRepo(data: {
+        "user_id": int.parse(userId),
+      });
 
-    log("Server verification check response: $response");
+      log("Server verification check response: $response");
 
-    if (response['status'] == 'success' && response['has_membership'] == true) {
-      await prefs.setBool("isGymCodeVerified", true);
+      if (response['status'] == 'success' && response['has_membership'] == true) {
+        // User has active membership
+        await prefs.setBool("isGymCodeVerified", true);
 
-      if (response['data']['partner_id'] != null) {
-        await prefs.setString("partnerId", response['data']['partner_id'].toString());
+        // Store partner_id from server response
+        if (response['data']['partner_id'] != null) {
+          await prefs.setString("partnerId", response['data']['partner_id'].toString());
+        }
+
+        state = state.copyWith(isGymCodeVerified: true);
+        log("✅ User gym verification restored from server");
+      } else {
+        // No active membership
+        await prefs.setBool("isGymCodeVerified", false);
+        state = state.copyWith(isGymCodeVerified: false);
+        log("❌ User is not verified on server");
       }
-      
-      state = state.copyWith(isGymCodeVerified: true);
-      log("✅ User gym verification restored from server");
-    } else {
-      await prefs.setBool("isGymCodeVerified", false);
-      state = state.copyWith(isGymCodeVerified: false);
-      log("❌ User is not verified on server");
+    } catch (e) {
+      // Network error - fall back to local storage
+      log("⚠️ Server check failed, using local storage: $e");
+      final localVerification = prefs.getBool("isGymCodeVerified") ?? false;
+      state = state.copyWith(isGymCodeVerified: localVerification);
     }
-  } catch (e) {
-    log("⚠️ Server check failed, using local storage: $e");
-    final localVerification = prefs.getBool("isGymCodeVerified") ?? false;
-    state = state.copyWith(isGymCodeVerified: localVerification);
   }
-}
 
+// Add helper method
   void setGymCodeVerified(bool isVerified) {
     state = state.copyWith(isGymCodeVerified: isVerified);
   }
 
+
+  // Function to get sub industry (Filters)
   Future<void> getSubIndustry(BuildContext context) async {
     try {
       state = state.copyWith(
@@ -294,7 +320,7 @@ Future<void> checkGymVerificationStatus() async {
       await _gymRepo.getSubIndustryRepo(data: {
         "categoryId": "21",
       }).then(
-        (value) {
+            (value) {
           log("Success near sub industry $value");
           state = state.copyWith(
             getSubIndustryList: value,
@@ -318,6 +344,7 @@ Future<void> checkGymVerificationStatus() async {
     }
   }
 
+  // Function to request gym
   Future<void> requestGymPartner(BuildContext context) async {
     try {
       state = state.copyWith(isRequestGymLoading: true);
@@ -349,6 +376,7 @@ Future<void> checkGymVerificationStatus() async {
     }
   }
 
+  // Function to get coaches list
   Future<void> getCoaches(BuildContext context) async {
     try {
       state = state.copyWith(
@@ -357,7 +385,7 @@ Future<void> checkGymVerificationStatus() async {
       await _gymRepo.getCoachesListRepo(data: {
         "partner_id": formatter.checkValue(prefs.getString("partnerId")),
       }).then(
-        (value) {
+            (value) {
           log("Success coaches list $value");
           state = state.copyWith(
             getCoachesList: value,
@@ -373,6 +401,7 @@ Future<void> checkGymVerificationStatus() async {
     }
   }
 
+  // Function to get coaches details
   Future<void> getCoachesDetails(BuildContext context) async {
     try {
       state = state.copyWith(
@@ -381,7 +410,7 @@ Future<void> checkGymVerificationStatus() async {
       await _gymRepo.getCoachesDetailsRepo(data: {
         "coach_id": formatter.checkValue(prefs.getString("coachId")),
       }).then(
-        (value) {
+            (value) {
           log("Success coaches details $value");
           state = state.copyWith(
             getCoachesDetails: value,
@@ -405,6 +434,9 @@ Future<void> checkGymVerificationStatus() async {
     }
   }
 
+  // ✅ CORRECTED GYM FOOD METHODS
+
+  // Function to get gym food items by meal
   Future<GymMealRecommendationsResponse> getGymFoodItemsByMeal({
     required String userId,
     required String meal,
@@ -412,13 +444,13 @@ Future<void> checkGymVerificationStatus() async {
   }) async {
     try {
       state = state.copyWith(isGymFoodLoading: true);
-      
+
       final response = await _gymRepo.getGymFoodItemsByMeal(
         userId: userId,
         meal: meal,
         foodType: foodType,
       );
-      
+
       state = state.copyWith(isGymFoodLoading: false, currentGymRecommendations: response);
       return response;
     } catch (e) {
@@ -428,296 +460,298 @@ Future<void> checkGymVerificationStatus() async {
     }
   }
 
-Future<void> addSelectedGymFoodToMeal({
-  required BuildContext context,
-  required String userId,
-  required String meal,
-  required List<GymFoodRecommendation> selectedItems,
-  required String day,
-}) async {
-  await _addGymFoodWithConflictHandling(
-    context: context,
-    userId: userId,
-    meal: meal,
-    selectedItems: selectedItems,
-    day: day,
-    forceReplace: false,
-  );
-}
-
-Future<void> _addGymFoodWithConflictHandling({
-  required BuildContext context,
-  required String userId,
-  required String meal,
-  required List<GymFoodRecommendation> selectedItems,
-  required String day,
-  required bool forceReplace,
-}) async {
-  try {
-    state = state.copyWith(isGymFoodLoading: true);
-    
-    final itemIds = selectedItems.map((item) => int.parse(item.itemId)).toList();
-    
-    log('=== ADDING GYM FOOD ITEMS ===');
-    log('User ID: $userId');
-    log('Meal: $meal');
-    log('Item IDs: $itemIds');
-    log('Day: $day');
-    log('Force Replace BodyIQ: $forceReplace');
-    
-    final response = await _gymRepo.addGymFoodItemToMeal(
+  // Function to add selected gym food to meal
+  Future<void> addSelectedGymFoodToMeal({
+    required BuildContext context,
+    required String userId,
+    required String meal,
+    required List<GymFoodRecommendation> selectedItems,
+    required String day,
+  }) async {
+    await _addGymFoodWithConflictHandling(
+      context: context,
       userId: userId,
       meal: meal,
-      itemIds: itemIds,
+      selectedItems: selectedItems,
       day: day,
-      forceReplaceBodyIq: forceReplace,
+      forceReplace: false, // ✅ INITIAL CALL WITH FALSE
     );
-    
-    log('=== ADD GYM FOOD RESPONSE ===');
-    log('Response: $response');
-    
-    // ✅ MOVE CONFLICT CHECK TO THE BEGINNING - BEFORE SUCCESS PROCESSING
-    if (!forceReplace && 
-        (response['status'] == 'confirm' || response['require_confirmation'] == true)) {
-      
-      log('=== CONFLICT DETECTED - SHOWING DIALOG ===');
-      state = state.copyWith(isGymFoodLoading: false);
-      
-      final shouldContinue = await _showBodyIqConflictDialog(context);
-      
-      if (shouldContinue) {
-        await _addGymFoodWithConflictHandling(
-          context: context,
-          userId: userId,
-          meal: meal,
-          selectedItems: selectedItems,
-          day: day,
-          forceReplace: true,
-        );
+  }
+
+// ✅ NEW PRIVATE METHOD TO HANDLE THE CONDITIONAL LOGIC
+  Future<void> _addGymFoodWithConflictHandling({
+    required BuildContext context,
+    required String userId,
+    required String meal,
+    required List<GymFoodRecommendation> selectedItems,
+    required String day,
+    required bool forceReplace,
+  }) async {
+    try {
+      state = state.copyWith(isGymFoodLoading: true);
+
+      final itemIds = selectedItems.map((item) => int.parse(item.itemId)).toList();
+
+      log('=== ADDING GYM FOOD ITEMS ===');
+      log('User ID: $userId');
+      log('Meal: $meal');
+      log('Item IDs: $itemIds');
+      log('Day: $day');
+      log('Force Replace BodyIQ: $forceReplace');
+
+      final response = await _gymRepo.addGymFoodItemToMeal(
+        userId: userId,
+        meal: meal,
+        itemIds: itemIds,
+        day: day,
+        forceReplaceBodyIq: forceReplace,
+      );
+
+      log('=== ADD GYM FOOD RESPONSE ===');
+      log('Response: $response');
+
+      // ✅ MOVE CONFLICT CHECK TO THE BEGINNING - BEFORE SUCCESS PROCESSING
+      if (!forceReplace &&
+          (response['status'] == 'confirm' || response['require_confirmation'] == true)) {
+
+        log('=== CONFLICT DETECTED - SHOWING DIALOG ===');
+        state = state.copyWith(isGymFoodLoading: false);
+
+        final shouldContinue = await _showBodyIqConflictDialog(context);
+
+        if (shouldContinue) {
+          await _addGymFoodWithConflictHandling(
+            context: context,
+            userId: userId,
+            meal: meal,
+            selectedItems: selectedItems,
+            day: day,
+            forceReplace: true,
+          );
+        }
+        return; // ✅ EARLY RETURN - DON'T PROCESS AS SUCCESS
       }
-      return; // ✅ EARLY RETURN - DON'T PROCESS AS SUCCESS
-    }
-    
-    // ✅ ONLY PROCESS SUCCESS IF NOT A CONFLICT
-    if (response['status'] == 'success') {
-      final addedItems = response['added_items'] as List?;
-      final skippedItems = response['skipped_items'] as List?;
-      
-      String message = 'Items processed successfully!';
-      bool isError = false;
-      
-      if (skippedItems != null && skippedItems.isNotEmpty) {
-        final skippedReasons = skippedItems.map((item) => 
+
+      // ✅ ONLY PROCESS SUCCESS IF NOT A CONFLICT
+      if (response['status'] == 'success') {
+        final addedItems = response['added_items'] as List?;
+        final skippedItems = response['skipped_items'] as List?;
+
+        String message = 'Items processed successfully!';
+        bool isError = false;
+
+        if (skippedItems != null && skippedItems.isNotEmpty) {
+          final skippedReasons = skippedItems.map((item) =>
           'Item ${item['item_id']}: ${item['reason']}'
-        ).join('\n');
-        
-        message = 'Some items were skipped:\n$skippedReasons';
-        isError = false;
+          ).join('\n');
+
+          message = 'Some items were skipped:\n$skippedReasons';
+          isError = false;
+        }
+
+        showCustomSnackbar(
+          context,
+          message,
+          isError: isError,
+        );
+
+        log("Gym food items processed successfully");
+      } else {
+        // ✅ ONLY THROW ERROR FOR ACTUAL ERRORS, NOT CONFLICTS
+        throw Exception(response['message'] ?? 'Failed to add items');
       }
-      
+
+    } catch (e) {
+      log("Error adding gym food items: $e");
+
       showCustomSnackbar(
         context,
-        message,
-        isError: isError,
+        "Error adding items: $e",
+        isError: true,
       );
-      
-      log("Gym food items processed successfully");
-    } else {
-      // ✅ ONLY THROW ERROR FOR ACTUAL ERRORS, NOT CONFLICTS
-      throw Exception(response['message'] ?? 'Failed to add items');
+
+      throw e;
+    } finally {
+      state = state.copyWith(isGymFoodLoading: false);
     }
-    
-  } catch (e) {
-    log("Error adding gym food items: $e");
-    
-    showCustomSnackbar(
-      context,
-      "Error adding items: $e",
-      isError: true,
-    );
-    
-    throw e;
-  } finally {
-    state = state.copyWith(isGymFoodLoading: false);
   }
-}
 
 
 // ✅ NEW METHOD FOR BODYIQ CONFLICT CONFIRMATION DIALOG
-Future<bool> _showBodyIqConflictDialog(BuildContext context) async {
-  return await showDialog<bool>(
-    context: context,
-    barrierDismissible: false, // ✅ FORCE USER TO CHOOSE
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 24,
+  Future<bool> _showBodyIqConflictDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // ✅ FORCE USER TO CHOOSE
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Replace BodyIQ Items?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'You already have items in BodyIQ tab. If you continue, BodyIQ items will be removed.',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            // ✅ CANCEL BUTTON
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false); // ✅ RETURN FALSE
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            const SizedBox(width: 8),
-            const Text(
-              'Replace BodyIQ Items?',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+            // ✅ CONTINUE BUTTON
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true); // ✅ RETURN TRUE
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
-        ),
-        content: const Text(
-          'You already have items in BodyIQ tab. If you continue, BodyIQ items will be removed.',
-          style: TextStyle(fontSize: 14),
-        ),
-        actions: [
-          // ✅ CANCEL BUTTON
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop(false); // ✅ RETURN FALSE
-            },
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          // ✅ CONTINUE BUTTON
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop(true); // ✅ RETURN TRUE
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  ) ?? false; // ✅ DEFAULT TO FALSE IF DIALOG IS DISMISSED
-}
+        );
+      },
+    ) ?? false; // ✅ DEFAULT TO FALSE IF DIALOG IS DISMISSED
+  }
 
   // ✅ ADD THIS METHOD TO YOUR GYM CONTROLLER
-Future<List<GymAddedMealItem>> getUserGymMealItems({
-  required String userId,
-  required String meal,
-}) async {
-  try {
-    state = state.copyWith(isGymFoodLoading: true);
-    
-    final response = await _gymRepo.getUserGymMealItems(
-      userId: userId,
-      meal: meal,
-    );
-    
-    state = state.copyWith(isGymFoodLoading: false);
-    return response;
-  } catch (e) {
-    state = state.copyWith(isGymFoodLoading: false);
-    log("Error getting user gym meal items: $e");
-    return [];
+  Future<List<GymAddedMealItem>> getUserGymMealItems({
+    required String userId,
+    required String meal,
+  }) async {
+    try {
+      state = state.copyWith(isGymFoodLoading: true);
+
+      final response = await _gymRepo.getUserGymMealItems(
+        userId: userId,
+        meal: meal,
+      );
+
+      state = state.copyWith(isGymFoodLoading: false);
+      return response;
+    } catch (e) {
+      state = state.copyWith(isGymFoodLoading: false);
+      log("Error getting user gym meal items: $e");
+      return [];
+    }
   }
-}
 // Add this method to your GymController class
-Future<TargetCaloriesResponse> getTargetCalories({
-  required String userId,
-}) async {
-  try {
-    return await _gymRepo.getTargetCalories(userId: userId);
-  } catch (e) {
-    throw Exception('Controller: Failed to fetch target calories: $e');
+  Future<TargetCaloriesResponse> getTargetCalories({
+    required String userId,
+  }) async {
+    try {
+      return await _gymRepo.getTargetCalories(userId: userId);
+    } catch (e) {
+      throw Exception('Controller: Failed to fetch target calories: $e');
+    }
   }
-}
 // Add this method to your GymController class
-Future<MealPlanResponse> generateMealPlanByCalories({
-  required String userId,
-}) async {
-  try {
-    print('=== GYM CONTROLLER: GENERATING MEAL PLAN ===');
-    print('User ID: $userId');
-    
-    return await _gymRepo.generateMealPlanByCalories(userId: userId);
-  } catch (e) {
-    log('GymController.generateMealPlanByCalories error: $e');
-    throw Exception('Controller: Failed to generate meal plan: $e');
+  Future<MealPlanResponse> generateMealPlanByCalories({
+    required String userId,
+  }) async {
+    try {
+      print('=== GYM CONTROLLER: GENERATING MEAL PLAN ===');
+      print('User ID: $userId');
+
+      return await _gymRepo.generateMealPlanByCalories(userId: userId);
+    } catch (e) {
+      log('GymController.generateMealPlanByCalories error: $e');
+      throw Exception('Controller: Failed to generate meal plan: $e');
+    }
   }
-}
-Future<void> saveSingleMealTime({
-  required String userId,
-  required String day,
-  required String meal,
-  required String time,
-}) async {
-  try {
-    print('=== GYM CONTROLLER: SAVING MEAL TIME ===');
-    
-    final requestData = {
-      'user_id': int.parse(userId),
-      'day': day,
-      'meal': meal,
-      'time': time,
-    };
+  Future<void> saveSingleMealTime({
+    required String userId,
+    required String day,
+    required String meal,
+    required String time,
+  }) async {
+    try {
+      print('=== GYM CONTROLLER: SAVING MEAL TIME ===');
 
-    print('Request Data: $requestData');
+      final requestData = {
+        'user_id': int.parse(userId),
+        'day': day,
+        'meal': meal,
+        'time': time,
+      };
 
-    final response = await _gymRepo.saveSingleMealTime(data: requestData);
-    
-    print('=== GYM MEAL TIME SAVED SUCCESSFULLY ===');
-    print('Response: ${response.data}');
-    
-  } catch (e) {
-    print('=== ERROR IN GYM CONTROLLER: SAVING MEAL TIME ===');
-    print('Error: $e');
-    throw Exception('Failed to save meal time: $e');
+      print('Request Data: $requestData');
+
+      final response = await _gymRepo.saveSingleMealTime(data: requestData);
+
+      print('=== GYM MEAL TIME SAVED SUCCESSFULLY ===');
+      print('Response: ${response.data}');
+
+    } catch (e) {
+      print('=== ERROR IN GYM CONTROLLER: SAVING MEAL TIME ===');
+      print('Error: $e');
+      throw Exception('Failed to save meal time: $e');
+    }
   }
-}
-Future<void> deleteFoodItemsFromMeal({
-  required String userId,
-  required String day,
-  required String meal,
-  required List<int> itemIds,
-}) async {
-  try {
-    print('=== GYM CONTROLLER: DELETING FOOD ITEMS ===');
-    print('User ID: $userId');
-    print('Day: $day');
-    print('Meal: $meal');
-    print('Item IDs: $itemIds');
+  Future<void> deleteFoodItemsFromMeal({
+    required String userId,
+    required String day,
+    required String meal,
+    required List<int> itemIds,
+  }) async {
+    try {
+      print('=== GYM CONTROLLER: DELETING FOOD ITEMS ===');
+      print('User ID: $userId');
+      print('Day: $day');
+      print('Meal: $meal');
+      print('Item IDs: $itemIds');
 
-    final requestData = {
-      'user_id': int.parse(userId),
-      'day': day,
-      'meal': meal,
-      'item_ids': itemIds,
-    };
+      final requestData = {
+        'user_id': int.parse(userId),
+        'day': day,
+        'meal': meal,
+        'item_ids': itemIds,
+      };
 
-    final response = await _gymRepo.deleteFoodItemToMeal(data: requestData);
-    
-    print('=== GYM CONTROLLER: DELETE SUCCESS ===');
-    print('Response: ${response.data}');
-    
-  } catch (e) {
-    print('=== GYM CONTROLLER: DELETE ERROR ===');
-    print('Error: $e');
-    throw Exception('Failed to delete food items: $e');
+      final response = await _gymRepo.deleteFoodItemToMeal(data: requestData);
+
+      print('=== GYM CONTROLLER: DELETE SUCCESS ===');
+      print('Response: ${response.data}');
+
+    } catch (e) {
+      print('=== GYM CONTROLLER: DELETE ERROR ===');
+      print('Error: $e');
+      throw Exception('Failed to delete food items: $e');
+    }
   }
-}
 
 
 
@@ -880,7 +914,7 @@ I want information about gym membership.
       await _gymRepo.getGymBuddyRepo(data: {
         "partner_id": formatter.checkValue(prefs.getString("partnerId")),
       }).then(
-        (value) {
+            (value) {
           log("Success near gym buddy $value");
           state = state.copyWith(
             getGymBuddyList: value,
@@ -914,7 +948,7 @@ I want information about gym membership.
         "partner_id": formatter.checkValue(prefs.getString("partnerId")),
         "buddy_id": formatter.checkValue(prefs.getString("buddyId")),
       }).then(
-        (value) {
+            (value) {
           log("Success near gym buddy details $value");
 
           state = state.copyWith(
@@ -941,128 +975,128 @@ I want information about gym membership.
   }
 
   // Function to request gym buddy
-Future<void> requestGymBuddy(BuildContext context) async {
-  try {
-    // Set loading state
-    state = state.copyWith(isRequestBuddyLoading: true);
-    
-    final prefs = await SharedPreferences.getInstance();
-    final myUserId = prefs.getString("userId");
-    final buddyUserId = state.getGymBuddyDetailsList.data?.profile?.userId;  // ✅ FIXED
-    final buddyName = state.getGymBuddyDetailsList.data?.profile?.name;
-    
-    if (myUserId == null || buddyUserId == null) {
-      throw Exception("Missing user information");
-    }
+  Future<void> requestGymBuddy(BuildContext context) async {
+    try {
+      // Set loading state
+      state = state.copyWith(isRequestBuddyLoading: true);
 
-    final response = await http.post(
-      Uri.parse('https://fitfirst.online/Api/sendBuddyRequest'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'sender_id': int.parse(myUserId),
-        'receiver_id': int.parse(buddyUserId), // Parse since id is String
-        'message': 'Hi $buddyName! I would like to be your gym buddy.',
-      }),
-    );
+      final prefs = await SharedPreferences.getInstance();
+      final myUserId = prefs.getString("userId");
+      final buddyUserId = state.getGymBuddyDetailsList.data?.profile?.userId;  // ✅ FIXED
+      final buddyName = state.getGymBuddyDetailsList.data?.profile?.name;
 
-    if (response.statusCode == 200) {
-      final jsonResponse = json.decode(response.body);
-      if (jsonResponse['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Buddy request sent successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        throw Exception(jsonResponse['message']);
+      if (myUserId == null || buddyUserId == null) {
+        throw Exception("Missing user information");
       }
-    } else {
-      throw Exception('Failed to send request');
+
+      final response = await http.post(
+        Uri.parse('https://fitfirst.online/Api/sendBuddyRequest'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sender_id': int.parse(myUserId),
+          'receiver_id': int.parse(buddyUserId), // Parse since id is String
+          'message': 'Hi $buddyName! I would like to be your gym buddy.',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Buddy request sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          throw Exception(jsonResponse['message']);
+        }
+      } else {
+        throw Exception('Failed to send request');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      state = state.copyWith(isRequestBuddyLoading: false);
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    state = state.copyWith(isRequestBuddyLoading: false);
   }
-}
 
 
 
   // Function to verify gym code
 // Update your existing verifyGymCode method to set verification state
-Future<void> verifyGymCode(BuildContext context) async {
-  try {
-    state = state.copyWith(isVerifyCodeLoading: true);
+  Future<void> verifyGymCode(BuildContext context) async {
+    try {
+      state = state.copyWith(isVerifyCodeLoading: true);
 
-    final value = await _gymRepo.verifyGymCodeRepo(data: {
-      "user_id": formatter.checkValue(prefs.getString("userId")),
-      "gym_code": formatter.checkValue(state.gymCodeController.text),
-    });
+      final value = await _gymRepo.verifyGymCodeRepo(data: {
+        "user_id": formatter.checkValue(prefs.getString("userId")),
+        "gym_code": formatter.checkValue(state.gymCodeController.text),
+      });
 
-    final status = value['status'].toString();
-    final message = value['message'] ?? "No message";
+      final status = value['status'].toString();
+      final message = value['message'] ?? "No message";
 
-    log("Gym Code Verification Response: $value");
+      log("Gym Code Verification Response: $value");
 
-    if (status == "success") {
-      // ✅ SET VERIFICATION STATE
-      await prefs.setBool("isGymCodeVerified", true);
-      state = state.copyWith(isGymCodeVerified: true);
-      
-      // Store partner_id from response
-      if (value['data'] != null && value['data']['partner_id'] != null) {
-        await prefs.setString("partnerId", value['data']['partner_id'].toString());
+      if (status == "success") {
+        // ✅ SET VERIFICATION STATE
+        await prefs.setBool("isGymCodeVerified", true);
+        state = state.copyWith(isGymCodeVerified: true);
+
+        // Store partner_id from response
+        if (value['data'] != null && value['data']['partner_id'] != null) {
+          await prefs.setString("partnerId", value['data']['partner_id'].toString());
+        }
+
+        showCustomPopup(
+          context,
+          title: "Success",
+          message: message,
+          iconData: Icons.check,
+          okButtonText: 'Ok',
+          cancelButtonText: '',
+          onCancelPressed: null,
+          onOkPressed: () {
+            NavigationWidget.commonNavigatioPop(context: context);
+            NavigationWidget.commonNavigatioPop(context: context);
+            ProviderScope.containerOf(context)
+                .read(DiProviders.schedulerControllerProvider.notifier)
+                .clearGymScheduleControllers();
+            CustomSmoothNavigator.push(context, GymSchedulerScreen());
+          },
+        );
+      } else {
+        showCustomPopup(
+          context,
+          title: "Error",
+          message: message,
+          iconData: Icons.info_outline,
+          okButtonText: 'Ok',
+          cancelButtonText: '',
+          onCancelPressed: null,
+        );
       }
-
+    } catch (e) {
+      log("Exception in verifyGymCode: $e");
       showCustomPopup(
         context,
-        title: "Success",
-        message: message,
-        iconData: Icons.check,
-        okButtonText: 'Ok',
-        cancelButtonText: '',
-        onCancelPressed: null,
-        onOkPressed: () {
-          NavigationWidget.commonNavigatioPop(context: context);
-          NavigationWidget.commonNavigatioPop(context: context);
-          ProviderScope.containerOf(context)
-              .read(DiProviders.schedulerControllerProvider.notifier)
-              .clearGymScheduleControllers();
-          CustomSmoothNavigator.push(context, GymSchedulerScreen());
-        },
-      );
-    } else {
-      showCustomPopup(
-        context,
-        title: "Error",
-        message: message,
+        title: "Something went wrong!",
+        message: e.toString(),
         iconData: Icons.info_outline,
         okButtonText: 'Ok',
         cancelButtonText: '',
         onCancelPressed: null,
       );
+    } finally {
+      state = state.copyWith(isVerifyCodeLoading: false);
     }
-  } catch (e) {
-    log("Exception in verifyGymCode: $e");
-    showCustomPopup(
-      context,
-      title: "Something went wrong!",
-      message: e.toString(),
-      iconData: Icons.info_outline,
-      okButtonText: 'Ok',
-      cancelButtonText: '',
-      onCancelPressed: null,
-    );
-  } finally {
-    state = state.copyWith(isVerifyCodeLoading: false);
   }
-}
 
 
   void onGymBuddyOnTap(BuildContext context, {required String partnerId}) {
@@ -1096,5 +1130,25 @@ Future<void> verifyGymCode(BuildContext context) async {
       return state.getGymBuddyList.data;
     }
     return state.getGymBuddyList.data?.where((buddy) => buddy.fitnessLevel == state.selectedExperience).toList();
+  }
+
+  Future<void> saveWeeklySchedule(BuildContext context, dynamic state) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final data = {
+      "workouts": state.selectedWorkoutsPerDay,
+      "fromTimes": state.gymFromTimeControllers
+          .map((k, v) => MapEntry(k, v.text)),
+      "toTimes": state.gymToTimeControllers
+          .map((k, v) => MapEntry(k, v.text)),
+    };
+
+    await prefs.setString("weekly_schedule", jsonEncode(data));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Weekly schedule saved")),
+    );
+
+    Navigator.pop(context);
   }
 }

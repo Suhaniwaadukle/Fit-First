@@ -120,7 +120,6 @@ Future<void> _loadBodyIQDataIfNeeded() async {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // These never change after the first frame, so cache them.
     _displayWidth   = MediaQuery.of(context).size.width;
     _navBarHeight   = _displayWidth * 0.15;
     _verticalMargin = _displayWidth * 0.08;

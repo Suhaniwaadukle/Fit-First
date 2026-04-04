@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:orka_sports/core/constants/app_colors.dart';
@@ -5,6 +6,42 @@ import 'package:orka_sports/core/constants/app_sizes_paddings.dart';
 import 'package:orka_sports/core/services/di_services.dart';
 import 'package:orka_sports/app/widgets/appbar/appbar.dart';
 import 'package:orka_sports/app/widgets/common_buttons_textforms/button_textforms.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../gym/presentation/pages/dashborad/gym_dashboad.dart';
+import '../../../domain/entities/scheduler_entity.dart';
+
+Future<void> saveWeeklySchedule(
+    BuildContext context,
+    SchedulerEntity state,
+    ) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final data = {
+    "workouts": state.selectedWorkoutsPerDay,
+    "fromTimes": state.gymFromTimeControllers.map(
+          (k, v) => MapEntry(k, v.text),
+    ),
+    "toTimes": state.gymToTimeControllers.map(
+          (k, v) => MapEntry(k, v.text),
+    ),
+  };
+
+  await prefs.setString("weekly_schedule", jsonEncode(data));
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Weekly schedule saved"),
+      duration: Duration(seconds: 2),
+    ),
+  );
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const GymDashboardScreen(),
+    ),
+  );
+}
 
 class GymSchedulerScreen extends ConsumerStatefulWidget {
   const GymSchedulerScreen({super.key});
@@ -164,15 +201,17 @@ class _GymSchedulerScreenState extends ConsumerState<GymSchedulerScreen> {
                                   child: const Text("Previous"),
                                 ),
                               ElevatedButton(
-                                onPressed: () {
-                                  if (_currentPage < daysOfWeek.length - 1) {
-                                    setState(() => _currentPage++);
-                                    _pageController.nextPage(
-                                        duration: const Duration(milliseconds: 300), curve: Curves.ease);
-                                  } else {
-                                    schedulerProvider.saveWeeklySchedule(context);
-                                  }
-                                },
+                              onPressed: () {
+                                 if (_currentPage < daysOfWeek.length - 1) {
+                                   setState(() => _currentPage++);
+                                   _pageController.nextPage(
+                                   duration: const Duration(milliseconds: 300),
+                                   curve: Curves.ease,
+                                   );
+                                 } else {
+                                   saveWeeklySchedule(context, schedulerState);
+                                 }
+                                 },
                                 child: Text(_currentPage == daysOfWeek.length - 1 ? "Save" : "Next"),
                               ),
                             ],

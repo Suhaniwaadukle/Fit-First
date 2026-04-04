@@ -1387,7 +1387,7 @@ Future<void> _toggleNotifications(bool value) async {
   }
 
   void _showCalculateBmiDialog() {
-    if (!mounted) return; // ✅ Check mounted before showing dialog
+    if (!mounted) return;
     
     showDialog(
       context: context,
@@ -1593,46 +1593,49 @@ Future<void> _toggleNotifications(bool value) async {
 
     if (fullScheduleData == null) return allItems;
 
-    // Add workout if available and has time
+    // WORKOUT
     if (fullScheduleData!.dailySchedule != null) {
       final workout = fullScheduleData!.dailySchedule!;
-      final startTime = workout.workoutTimeFrom;
-      
-      if (startTime.isNotEmpty && !workout.workout.toLowerCase().contains('off')) {
+
+      if (workout.workoutTimeFrom.isNotEmpty) {
         allItems.add({
           'type': 'workout',
           'data': workout,
-          'time': startTime,
-          'sortTime': _parseTimeForSorting(startTime),
+          'time': workout.workoutTimeFrom,
+          'sortTime': _parseTimeForSorting(workout.workoutTimeFrom),
         });
       }
     }
 
-    // Add meals if available
+    // MEALS
     if (fullScheduleData!.mealSchedule != null) {
-      final mealSchedule = fullScheduleData!.mealSchedule!;
-      final meals = [
-        {'name': 'Breakfast', 'time': mealSchedule.breakfast, 'icon': Icons.free_breakfast},
-        {'name': 'Mid Morning', 'time': mealSchedule.midMorningSnack, 'icon': Icons.coffee},
-        {'name': 'Lunch', 'time': mealSchedule.lunch, 'icon': Icons.lunch_dining},
-        {'name': 'Pre Workout', 'time': mealSchedule.preWorkout, 'icon': Icons.sports_gymnastics},
-        {'name': 'Post Workout', 'time': mealSchedule.postWorkout, 'icon': Icons.sports_bar},
-        {'name': 'Dinner', 'time': mealSchedule.dinner, 'icon': Icons.dinner_dining},
-        {'name': 'Bedtime', 'time': mealSchedule.bedtimeProtein, 'icon': Icons.bedtime},
-      ].where((meal) => (meal['time'] as String).isNotEmpty);
+      final meal = fullScheduleData!.mealSchedule!;
 
-      for (final meal in meals) {
-        final time = meal['time'] as String;
-        allItems.add({
-          'type': 'meal',
-          'data': meal,
-          'time': time,
-          'sortTime': _parseTimeForSorting(time),
-        });
+      final meals = [
+        {'name': 'Breakfast', 'time': meal.breakfast, 'icon': Icons.free_breakfast},
+        {'name': 'Mid Morning', 'time': meal.midMorningSnack, 'icon': Icons.coffee},
+        {'name': 'Lunch', 'time': meal.lunch, 'icon': Icons.lunch_dining},
+        {'name': 'Pre Workout', 'time': meal.preWorkout, 'icon': Icons.sports_gymnastics},
+        {'name': 'Post Workout', 'time': meal.postWorkout, 'icon': Icons.sports_bar},
+        {'name': 'Dinner', 'time': meal.dinner, 'icon': Icons.dinner_dining},
+        {'name': 'Bedtime', 'time': meal.bedtimeProtein, 'icon': Icons.bedtime},
+      ];
+
+      for (final m in meals) {
+        final time = (m['time'] ?? '').toString();
+
+        if (time.isNotEmpty) {
+          allItems.add({
+            'type': 'meal',
+            'data': m,
+            'time': time,
+            'sortTime': _parseTimeForSorting(time),
+          });
+        }
       }
     }
 
-    // Add supplements if available
+    // SUPPLEMENTS
     for (final supplement in fullScheduleData!.supplements) {
       if (supplement.time.isNotEmpty) {
         allItems.add({
@@ -1644,8 +1647,9 @@ Future<void> _toggleNotifications(bool value) async {
       }
     }
 
-    // Sort all items by time
-    allItems.sort((a, b) => (a['sortTime'] as int).compareTo(b['sortTime'] as int));
+    // SORT
+    allItems.sort((a, b) =>
+        (a['sortTime'] as int).compareTo(b['sortTime'] as int));
 
     return allItems;
   }
@@ -2345,8 +2349,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                                   ],
                                 ),
                                 AppSize.kHeight10,
-                                
-                                // Time-Sorted Schedule Display
+
                                 _buildTimeSortedScheduleSection(),
                                 
                                 const SizedBox(height: 20),
@@ -2369,9 +2372,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                                     _showComingSoonDialog('Light Mode');
                                   },
                                 ),
-                                
-                                // Notification Toggle
-                                // REPLACE your current notification SwitchListTile with this:
+
                                   SwitchListTile(
                                     contentPadding: EdgeInsets.zero,
                                     title: const Text(
@@ -2442,8 +2443,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                     ),
                   ],
                 ),
-                
-                // Profile Avatar (always visible)
                 Positioned(
                   top: 0,
                   child: Padding(
@@ -2505,10 +2504,12 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     );
   }
 
-  // Build time-sorted schedule section
   Widget _buildTimeSortedScheduleSection() {
+    print("Sending day: $currentDay");
+    print("Schedule Data: $fullScheduleData");
+    print("Workout: ${fullScheduleData?.dailySchedule?.workout}");
+    print("Workout Time: ${fullScheduleData?.dailySchedule?.workoutTimeFrom}");
     const brandBlue = Color(0xFF0A1950);
-
     if (isLoadingSchedule) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -2672,8 +2673,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
         ),
       );
     }
-
-    // Display all items sorted by time
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2735,8 +2734,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
           const SizedBox(height: 16),
           Divider(color: brandBlue.withValues(alpha: 0.2)),
           const SizedBox(height: 12),
-
-          // Display sorted items
           Column(
             children: sortedItems.asMap().entries.map((entry) {
               final index = entry.key;
@@ -2749,12 +2746,12 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
               );
             }).toList(),
           ),
+
         ],
       ),
     );
   }
 
-  // Build individual schedule item based on type
   Widget _buildScheduleItem(Map<String, dynamic> item) {
     final type = item['type'] as String;
     final time = item['time'] as String;
@@ -2776,7 +2773,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     }
   }
 
-  // ✅ Updated workout item with proper mounted checks
   Widget _buildWorkoutScheduleItem(DailySchedule workout) {
     const brandBlue = Color(0xFF0A1950);
 
@@ -2865,21 +2861,19 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
             ],
           ),
           const SizedBox(height: 12),
-          // Mark as Complete Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: isMarkingWorkoutComplete
                   ? null
                   : () async {
-                      if (!mounted) return; // ✅ Check mounted
+                      if (!mounted) return;
                       
                       setState(() { isMarkingWorkoutComplete = true; });
                       try {
-                        // Get current location
                         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
                         if (!serviceEnabled) {
-                          if (mounted) { // ✅ Check mounted before snackbar
+                          if (mounted) {
                             showCustomSnackbar(context, 'Location services are disabled.', isError: true);
                             setState(() { isMarkingWorkoutComplete = false; });
                           }
@@ -2931,7 +2925,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                         );
 
                         final respData = response.data;
-                        
+
                         if (!mounted) return; // ✅ Check mounted before snackbar and setState
                         
                         if (respData["status"] == "success") {
@@ -2947,7 +2941,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                           showCustomSnackbar(context, "Error: $e", isError: true);
                         }
                       } finally {
-                        if (mounted) { // ✅ Check mounted before setState
+                        if (mounted) {
                           setState(() { isMarkingWorkoutComplete = false; });
                         }
                       }
@@ -2975,19 +2969,16 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     );
   }
 
-  // Build meal schedule item with time-based buttons
   Widget _buildMealScheduleItem({
     required String mealName,
     required String mealTime,
     required IconData mealIcon,
   }) {
     const brandBlue = Color(0xFF0A1950);
-
     final mealKey = mealName.toLowerCase();
     final currentAction = mealActions[mealKey];
     final isLoading = mealActionLoading[mealKey] ?? false;
     final isButtonsActive = _areButtonsActiveForMeal(mealTime);
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -3170,10 +3161,8 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     );
   }
 
-  // Build supplement schedule item
   Widget _buildSupplementScheduleItem(Supplement supplement) {
     const brandBlue = Color(0xFF0A1950);
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -3239,7 +3228,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     );
   }
 
-  // Build action button with active/inactive states
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -3249,7 +3237,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     required bool isActive,
   }) {
     const brandBlue = Color(0xFF0A1950);
-
     return GestureDetector(
       onTap: isActive ? onPressed : null,
       child: Container(
@@ -3299,7 +3286,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     );
   }
 
-  // Helper methods for action styling
   IconData _getActionIcon(String action) {
     switch (action) {
       case 'Eat': return Icons.restaurant;
@@ -3309,7 +3295,6 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
     }
   }
 
-  // Format time helper
   String _formatTime(String time) {
     if (time.isEmpty) return '';
     
@@ -3335,8 +3320,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
   }
 
   void _showComingSoonDialog(String feature) {
-    if (!mounted) return; // ✅ Check mounted before dialog
-    
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -3353,8 +3337,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
   }
 
   void _showLogoutDialog(BuildContext context) {
-    if (!mounted) return; // ✅ Check mounted before dialog
-    
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (BuildContext context) {

@@ -27,16 +27,34 @@ class FullScheduleData {
   });
 
   factory FullScheduleData.fromJson(Map<String, dynamic> json) {
+
+    DailySchedule? schedule;
+
+    if (json['daily_schedule'] != null) {
+
+      // If backend sends LIST
+      if (json['daily_schedule'] is List) {
+        final list = json['daily_schedule'] as List;
+        if (list.isNotEmpty) {
+          schedule = DailySchedule.fromJson(list.first);
+        }
+      }
+
+      // If backend sends OBJECT
+      else if (json['daily_schedule'] is Map) {
+        schedule = DailySchedule.fromJson(json['daily_schedule']);
+      }
+    }
+
     return FullScheduleData(
-      dailySchedule: json['daily_schedule'] != null 
-          ? DailySchedule.fromJson(json['daily_schedule']) 
-          : null,
-      mealSchedule: json['meal_schedule'] != null 
-          ? MealSchedule.fromJson(json['meal_schedule']) 
+      dailySchedule: schedule,
+      mealSchedule: json['meal_schedule'] != null
+          ? MealSchedule.fromJson(json['meal_schedule'])
           : null,
       supplements: (json['supplements'] as List<dynamic>?)
           ?.map((item) => Supplement.fromJson(item))
-          .toList() ?? [],
+          .toList() ??
+          [],
     );
   }
 }

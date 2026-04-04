@@ -26,6 +26,7 @@ class ExistingGymWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 20),
         const Text(
           'Enter your gym name',
           style: TextStyle(
@@ -64,60 +65,60 @@ class ExistingGymWidget extends StatelessWidget {
         gymEntity.isSearchGymLoading
             ? CommonLoadingWidget()
             : gymEntity.searchGymList.data == null || (gymEntity.searchGymList.data?.isEmpty ?? false)
-                ? SizedBox(
-                    width: double.infinity,
-                    child: ButtonWidget(
-                      borderRadius: BorderRadius.circular(15),
-                      backgroundColor: gymEntity.isSearchFieldValid
-                          ? WidgetStatePropertyAll(
-                              AppColors.kPrimaryColor,
-                            )
-                          : WidgetStatePropertyAll(
-                              AppColors.kBlack.withValues(alpha: 0.15),
-                            ),
-                      text: 'Search',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: AppColors.kWhite,
-                            fontWeight: FontWeight.bold,
-                          ),
-                      onPressed: gymEntity.isSearchFieldValid ? onCheckPartnership : null,
-                    ),
-                  )
-                : Column(
-                    children: List.generate(
-                      gymEntity.searchGymList.data!.length,
-                      (index) {
-                        final gym = gymEntity.searchGymList.data![index];
-                        final isSelected = gymEntity.selectedGymIndex == index;
+            ? SizedBox(
+          width: double.infinity,
+          child: ButtonWidget(
+            borderRadius: BorderRadius.circular(15),
+            backgroundColor: gymEntity.isSearchFieldValid
+                ? WidgetStatePropertyAll(
+              AppColors.kPrimaryColor,
+            )
+                : WidgetStatePropertyAll(
+              AppColors.kBlack.withValues(alpha: 0.15),
+            ),
+            text: 'Search',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppColors.kWhite,
+              fontWeight: FontWeight.bold,
+            ),
+            onPressed: gymEntity.isSearchFieldValid ? onCheckPartnership : null,
+          ),
+        )
+            : Column(
+          children: List.generate(
+            gymEntity.searchGymList.data!.length,
+                (index) {
+              final gym = gymEntity.searchGymList.data![index];
+              final isSelected = gymEntity.selectedGymIndex == index;
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: GestureDetector(
-                            onTap: () => gymController.selectGymIndex(index),
-                            child: buildGymCard<SearchGymData>(
-                                context: context,
-                                gym: gym,
-                                isSelected: isSelected,
-                                getName: (g) => g.name ?? '',
-                                getEmail: (data) => data.email ?? '',
-                                getPhoneCode: (data) => data.phonecode ?? '',
-                                getMobile: (data) => data.mobile ?? '',
-                                getImageUrl: (data) => data.partnerImage ?? '',
-                                getDistance: (g) => g.distance ?? '',
-                                isPartner: (g) => g.partnerImage != null && g.partnerImage!.isNotEmpty,
-                                onLeftButtonPressed: () => gymController.onGymDetailsOnTap(
-                                      context,
-                                      type: "My Gym",
-                                      partnerId: gym.id ?? '',
-                                      searchGym: gym,
-                                    ),
-                                onRightButtonPressed: () =>
-                                    gymController.onGymBuddyOnTap(context, partnerId: gym.id ?? '')),
-                          ),
-                        );
-                      },
-                    ),
-                  )
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: GestureDetector(
+                  onTap: () => gymController.selectGymIndex(index),
+                  child: buildGymCard<SearchGymData>(
+                      context: context,
+                      gym: gym,
+                      isSelected: isSelected,
+                      getName: (g) => g.name ?? '',
+                      getEmail: (data) => data.email ?? '',
+                      getPhoneCode: (data) => data.phonecode ?? '',
+                      getMobile: (data) => data.mobile ?? '',
+                      getImageUrl: (data) => data.partnerImage ?? '',
+                      getDistance: (g) => g.distance ?? '',
+                      isPartner: (g) => g.partnerImage != null && g.partnerImage!.isNotEmpty,
+                      onLeftButtonPressed: () => gymController.onGymDetailsOnTap(
+                        context,
+                        type: "My Gym",
+                        partnerId: gym.id ?? '',
+                        searchGym: gym,
+                      ),
+                      onRightButtonPressed: () =>
+                          gymController.onGymBuddyOnTap(context, partnerId: gym.id ?? '')),
+                ),
+              );
+            },
+          ),
+        )
       ],
     );
   }

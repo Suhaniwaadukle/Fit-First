@@ -13,28 +13,20 @@ class SupplementScheduleEntity {
 class SchedulerEntity {
   final bool isAllScheduleLoading;
   final GetFullScheduleModel getFullScheduleModel;
-
-  // Existing Daily Schedule Controllers
   final TextEditingController dayController;
   final TextEditingController workoutController;
   final TextEditingController workoutTimeController;
   final TextEditingController fromTimeController;
   final TextEditingController toTimeController;
-
-  // ✅ NEW: Gym daily schedule controllers (with `gym` prefix)
   final Map<String, TextEditingController> gymWorkoutControllers;
   final Map<String, TextEditingController> gymFromTimeControllers;
   final Map<String, TextEditingController> gymToTimeControllers;
-
-  // Meal Schedule
   final TextEditingController breakfastTimeController;
   final TextEditingController midMorningSnackTimeController;
   final TextEditingController lunchTimeController;
   final TextEditingController preWorkoutTimeController;
   final TextEditingController postWorkoutTimeController;
   final TextEditingController dinnerTimeController;
-
-  // Supplement Schedule
   final List<SupplementScheduleEntity> supplementControllers;
   final bool isDailyScheduleLoading;
   final TextEditingController reminderDayController;
@@ -176,8 +168,6 @@ class SchedulerEntity {
     TextEditingController? workoutTimeController,
     TextEditingController? fromTimeController,
     TextEditingController? toTimeController,
-
-    // ✅ NEW
     Map<String, TextEditingController>? gymWorkoutControllers,
     Map<String, TextEditingController>? gymFromTimeControllers,
     Map<String, TextEditingController>? gymToTimeControllers,

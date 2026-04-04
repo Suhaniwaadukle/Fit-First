@@ -299,7 +299,6 @@ class GymPersonalizedPlanScreen extends ConsumerWidget {
   }
 }
 
-// Simple placeholder page for navigation target
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});

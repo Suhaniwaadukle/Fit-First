@@ -26,7 +26,6 @@ class _WelcomeScreenState extends State<GymBoardingScreen> {
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
-                    // Gym Icon
                     Container(
                       width: 120,
                       height: 120,
@@ -42,8 +41,6 @@ class _WelcomeScreenState extends State<GymBoardingScreen> {
                     ),
 
                     const SizedBox(height: 40),
-
-                    // Welcome Title
                     Text(
                       'Welcome to\nGym Experience',
                       textAlign: TextAlign.center,
@@ -54,8 +51,6 @@ class _WelcomeScreenState extends State<GymBoardingScreen> {
                     ),
 
                     const SizedBox(height: 16),
-
-                    // Subtitle
                     Text(
                       'Join the future of fitness with gym partners & gym buddies.',
                       textAlign: TextAlign.center,
@@ -67,7 +62,6 @@ class _WelcomeScreenState extends State<GymBoardingScreen> {
 
                     const SizedBox(height: 30),
 
-                    // Sign In Text
                     SizedBox(
                       width: double.infinity,
                       child: ButtonWidget(
