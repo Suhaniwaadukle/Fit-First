@@ -30,7 +30,6 @@ class ActivityRepository {
     };
   }
 
-  /// Insert activity using multipart/form-data
   Future<InsertActivityResponse> insertActivityMultipart(
     ActivityData activityData,
   ) async {
@@ -275,7 +274,8 @@ Future<PartnersResponse> getPartnersForSubCategory({
     required String partnerId,
     required String subCategoryId,
     required String productName,
-  }) async {
+  }) async
+  {
     try {
       // Use http.post instead of http.get
       final uri = Uri.parse('$_baseUrl/getProductDetails');
@@ -319,7 +319,8 @@ Future<PartnersResponse> getPartnersForSubCategory({
     required String subCategoryId,
     required String productName,
     required String productWeight,
-  }) async {
+  }) async
+  {
     try {
       final uri = Uri.parse('$_baseUrl/getProductDetailsForVarient');
       var request = http.MultipartRequest('POST', uri);

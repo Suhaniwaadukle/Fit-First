@@ -77,13 +77,9 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   String _destinationLat = "0.0";
   String _destinationLng = "0.0";
 
-  // _currentDistanceKm will now be primarily for live UI display from GPS
-  // The final distance for saving will come from the health package if available
   double _liveGpsDistanceKm = 0.0;
   String _avgPace = "00:00"; // Will be recalculated with final distance
 
-  // _caloriesBurned will be primarily for live UI display from calculation
-  // The final calories for saving will come from the health package if available
   String _liveCalculatedCaloriesBurned = "0.0";
 
   double _maxSpeed = 0.0;
@@ -94,10 +90,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   bool _isStopping = false;
 
   Marker? _userMarker;
-
-  // Health package factory
-  // final Health _health = Health();
-  // final List<HealthDataType> _healthDataTypes = [HealthDataType.DISTANCE_DELTA, HealthDataType.ACTIVE_ENERGY_BURNED];
 
   @override
   void initState() {
@@ -172,14 +164,11 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   _updateUserMarker(LatLng position) {
     if (!mounted) return;
     setState(() {
-      // Clear existing markers that are just for user's current location if needed
-      // _markers.removeWhere((m) => m.markerId.value == 'user_location');
       _userMarker = Marker(
         markerId: const MarkerId('user_location'),
         position: position,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // A different color for live tracking
       );
-      // Add it to the main set if you want it to persist, or handle it separately
       _markers.add(_userMarker!);
     });
   }
@@ -378,7 +367,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   void _addMarker(LatLng position, String markerId, String title) {
     if (!mounted) return;
     setState(() {
-      // Remove old user marker before adding point specific markers like start/end
       _markers.removeWhere((m) => m.markerId.value == 'user_location');
       _markers.add(
         Marker(
@@ -392,16 +380,13 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       );
     });
   }
-
-  // MODIFIED METHOD TO USE ROAD-SNAPPED COORDINATES
   void _updatePolyline() {
     if (!mounted) return;
-    
-    // Use road-snapped coordinates if available, otherwise use GPS coordinates
-    final coordinatesToUse = _roadSnappedCoordinates.isNotEmpty 
-        ? _roadSnappedCoordinates 
+
+    final coordinatesToUse = _roadSnappedCoordinates.isNotEmpty
+        ? _roadSnappedCoordinates
         : _routeCoordinates;
-    
+
     setState(() {
       _polylines.clear();
       _polylines.add(
@@ -418,8 +403,8 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   Future<Map<String, double?>> _fetchHealthData(DateTime startTime, DateTime endTime) async {
     log("Skipping health data fetch. Returning fallback values for GPS.");
     return {
-      'distance': null, // Will fallback to GPS distance
-      'calories': null, // Will fallback to calculated calories
+      'distance': null,
+      'calories': null,
     };
   }
 
@@ -427,8 +412,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     if (_activityTimer!.isActive) _activityTimer?.cancel();
     _locationSubscription?.cancel();
     final DateTime endTime = DateTime.now();
-
-    // Fetch final location for destination coordinates
     try {
       loc.LocationData? finalLocation = await _locationController.getLocation();
       if (finalLocation.latitude != null && finalLocation.longitude != null) {
@@ -624,16 +607,16 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   }
 
   void decrementGoalDistance() => setState(() {
-        if (widget.distanceGoal == 0 || widget.distanceGoal == 0.0) {
-          if (distanceGoal > 0.5) distanceGoal -= 0.5;
-        } else {
-          if (distanceGoal > widget.distanceGoal) {
-            distanceGoal -= 0.5;
-          } else {
-            showGoalRestrictionPopup(context, distanceGoal.toString());
-          }
-        }
-      });
+    if (widget.distanceGoal == 0 || widget.distanceGoal == 0.0) {
+      if (distanceGoal > 0.5) distanceGoal -= 0.5;
+    } else {
+      if (distanceGoal > widget.distanceGoal) {
+        distanceGoal -= 0.5;
+      } else {
+        showGoalRestrictionPopup(context, distanceGoal.toString());
+      }
+    }
+  });
 
   @override
   void dispose() {
@@ -646,7 +629,7 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   Future<void> showGoalRestrictionPopup(BuildContext context, String distanceGoal) {
     return showDialog(
       context: context,
-      barrierDismissible: false, // Prevent closing by tapping outside
+      barrierDismissible: false,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -702,13 +685,11 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Update user marker on map based on LocationBloc updates if map is visible and activity not started
-    // This handles initial location updates before session starts
     final currentMarkers = Set<Marker>.from(_markers);
 
     if (_userMarker != null) {
-      currentMarkers.removeWhere((m) => m.markerId.value == 'user_location'); // Remove old one if any
-      currentMarkers.add(_userMarker!); // Add current one
+      currentMarkers.removeWhere((m) => m.markerId.value == 'user_location');
+      currentMarkers.add(_userMarker!);
     }
 
     return BlocListener<ActivityBloc, ActivityState>(
@@ -722,49 +703,69 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
         }
       },
       child: Scaffold(
-        appBar: CommonAppBar(),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+
+          title: const Text(
+            "Activity",
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+          centerTitle: true,
+        ),
         backgroundColor: Colors.white,
         body: SafeArea(
           child: _currentIndex == 0
               ? Column(
-                  children: [
-                    SizedBox(
-                      height: 200,
-                      width: double.infinity,
-                      child: BlocListener<LocationBloc, AppLocationState.LocationState>(
-                        listener: (context, locState) {
-                          if (locState is AppLocationState.LocationLoaded && !isStarted && mounted) {
-                            final newCenter = LatLng(locState.latitude, locState.longitude);
-                            _updateUserMarker(newCenter);
-                            if (_mapController != null) {
-                              _mapController!.animateCamera(CameraUpdate.newLatLngZoom(newCenter, 15.0));
-                            } else {
-                              // If map not created yet, update initial center for when it is
-                              setState(() {
-                                _initialMapCenter = newCenter;
-                              });
-                            }
-                          }
-                        },
-                        child: GoogleMap(
-                          onMapCreated: _onMapCreated,
-                          initialCameraPosition: CameraPosition(
-                            target: _initialMapCenter ?? const LatLng(0, 0), // Default if still null
-                            zoom: 15.0,
-                          ),
-                          markers: currentMarkers, // Use the dynamic set
-                          polylines: _polylines,
-                          myLocationEnabled: false, // Using custom marker
-                          myLocationButtonEnabled: false,
-                          zoomControlsEnabled: true,
-                          buildingsEnabled: false, // ADD THIS LINE TO FIX FLOATING POLYLINES
-                          padding: const EdgeInsets.only(bottom: 20),
-                        ),
-                      ),
+            children: [
+              SizedBox(
+                height: 200,
+                width: double.infinity,
+                child: BlocListener<LocationBloc, AppLocationState.LocationState>(
+                  listener: (context, locState) {
+                    if (locState is AppLocationState.LocationLoaded && !isStarted && mounted) {
+                      final newCenter = LatLng(locState.latitude, locState.longitude);
+                      _updateUserMarker(newCenter);
+                      if (_mapController != null) {
+                        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(newCenter, 15.0));
+                      } else {
+                        // If map not created yet, update initial center for when it is
+                        setState(() {
+                          _initialMapCenter = newCenter;
+                        });
+                      }
+                    }
+                  },
+                  child: GoogleMap(
+                    onMapCreated: _onMapCreated,
+                    initialCameraPosition: CameraPosition(
+                      target: _initialMapCenter ?? const LatLng(0, 0), // Default if still null
+                      zoom: 15.0,
                     ),
-                    Expanded(child: isStarted ? _buildInProgressUI(context) : _buildGoalUI(context)),
-                  ],
-                )
+                    markers: currentMarkers, // Use the dynamic set
+                    polylines: _polylines,
+                    myLocationEnabled: false, // Using custom marker
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: true,
+                    buildingsEnabled: false, // ADD THIS LINE TO FIX FLOATING POLYLINES
+                    padding: const EdgeInsets.only(bottom: 20),
+                  ),
+                ),
+              ),
+              Expanded(child: isStarted ? _buildInProgressUI(context) : _buildGoalUI(context)),
+            ],
+          )
               : HistoryScreen(),
         ),
         bottomNavigationBar: Column(
@@ -772,58 +773,58 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
           children: [
             isStarted
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                    child: SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            elevation: 6,
-                          ),
-                          onPressed: _isStopping
-                              ? null
-                              : () async {
-                                  setState(() => _isStopping = true);
-                                  await _stopSession(); // reward logic is inside this
-                                  if (mounted) setState(() => _isStopping = false);
-                                },
-                          child: _isStopping
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : const Text(
-                                  'Stop',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                        )),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 6,
-                        ),
-                        onPressed: _startSession,
-                        child: const Text(
-                          'Start',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 6,
                     ),
+                    onPressed: _isStopping
+                        ? null
+                        : () async {
+                      setState(() => _isStopping = true);
+                      await _stopSession(); // reward logic is inside this
+                      if (mounted) setState(() => _isStopping = false);
+                    },
+                    child: _isStopping
+                        ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                        : const Text(
+                      'Stop',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  )),
+            )
+                : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 6,
                   ),
+                  onPressed: _startSession,
+                  child: const Text(
+                    'Start',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
             _buildBottomBar(context),
           ],
         ),
@@ -841,7 +842,7 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 24), // Reduced from 54
-          Expanded( // Wrap in Expanded to take available space
+          Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Card(
@@ -886,15 +887,15 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
                           Text(widget.activityType, style: const TextStyle(fontSize: 16)),
                         ],
                       ),
-                      const SizedBox(height: 16), // Reduced from 18
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 context.read<ActivitySubCategoryBloc>().add(
-                                      LoadSubCategories(activityId: widget.activityId, activityType: 'Nutrition'),
-                                    );
+                                  LoadSubCategories(activityId: widget.activityId, activityType: 'Nutrition'),
+                                );
                                 CustomSmoothNavigator.push(
                                   context,
                                   NutritionScreen(activityId: widget.activityId, activityType: 'Nutrition'),
@@ -916,8 +917,8 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 context.read<ActivitySubCategoryBloc>().add(
-                                      LoadSubCategories(activityId: widget.activityId, activityType: 'Gear'),
-                                    );
+                                  LoadSubCategories(activityId: widget.activityId, activityType: 'Gear'),
+                                );
                                 CustomSmoothNavigator.push(
                                   context,
                                   GearScreen(activityId: widget.activityId, activityType: 'Gear'),
@@ -942,7 +943,7 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 14), // Bottom padding, reduced from 20
+          const SizedBox(height: 14),
         ],
       ),
     );
@@ -953,13 +954,11 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     if (goalType == 'Distance' && distanceGoal > 0) {
       progressValue = (_liveGpsDistanceKm / distanceGoal).clamp(0.0, 1.0);
     }
-
     String formattedDistance = _liveGpsDistanceKm.toStringAsFixed(3);
     String formattedCalories = _liveCalculatedCaloriesBurned;
     String formattedPace = _avgPace;
     String formattedElevation = _totalElevationGain.toStringAsFixed(1);
 
-    // Combine all stat cards into a single list
     final statCards = [
       _StatCard(
         icon: Icons.timer,
@@ -1040,8 +1039,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
               ],
             ),
             const SizedBox(height: 14),
-
-            /// ✅ Grid of stat cards (2 per row)
             StatCardGrid(cards: statCards),
 
             const SizedBox(height: 16),
@@ -1121,7 +1118,7 @@ class StatCardGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.2, // adjust for your desired card shape
+        childAspectRatio: 1.2,
       ),
       itemBuilder: (context, index) => cards[index],
     );

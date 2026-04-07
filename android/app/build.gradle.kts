@@ -17,7 +17,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 val flutterVersionCode = localProperties.getProperty("flutter.versionCode", "2").toInt()
-val flutterVersionName = localProperties.getProperty("flutter.versionName", "1.1")
+val flutterVersionName = localProperties.getProperty("flutter.versionName", "1.2")
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -39,7 +39,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.fitfirst.app"
         minSdk = 26
         targetSdk = 35

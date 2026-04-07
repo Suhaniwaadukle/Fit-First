@@ -2,6 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 
@@ -37,13 +38,6 @@
 
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
-	<!-- HealthKit Permissions -->
-	<key>NSHealthShareUsageDescription</key>
-	<string>Fit First reads your Apple Health data such as steps, distance, and calories to show your fitness progress inside the app.</string>
-
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Fit First may write workout or activity data to Apple Health so your fitness progress stays synchronized.</string>
 
 	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>

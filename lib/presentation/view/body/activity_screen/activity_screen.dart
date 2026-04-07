@@ -120,14 +120,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           radius: 28,
                           child: isLoading
                               ? const CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                                )
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                          )
                               : Icon(
-                                  icon,
-                                  color: AppColors.primary,
-                                  size: 30,
-                                ),
+                            icon,
+                            color: AppColors.primary,
+                            size: 30,
+                          ),
                         ),
                         title: Text(
                           title,
@@ -152,10 +152,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         onTap: isLoading
                             ? null
                             : () => _handleActivityTap(
-                                  title: title,
-                                  icon: icon,
-                                  getActivity: getActivity,
-                                ),
+                          title: title,
+                          icon: icon,
+                          getActivity: getActivity,
+                        ),
                       ),
                     ),
                   );
@@ -176,43 +176,43 @@ class _ActivityScreenState extends State<ActivityScreen> {
     required List<ActivityListItem> getActivity,
   }) async {
 
-  
 
-  // 🔍 Debug: Print all available activities
-  log("🔍 Available activities from API:");
-  for (var activity in getActivity) {
-    log("🔍 - '${activity.name}' (ID: ${activity.id})");
-  }
-  log("🔍 User tapped: '$title'");
 
-  final matchingActivities = getActivity.where((act) => 
+    // 🔍 Debug: Print all available activities
+    log("🔍 Available activities from API:");
+    for (var activity in getActivity) {
+      log("🔍 - '${activity.name}' (ID: ${activity.id})");
+    }
+    log("🔍 User tapped: '$title'");
+
+    final matchingActivities = getActivity.where((act) =>
     act.name.trim().toLowerCase() == title.trim().toLowerCase()
-  ).toList();
+    ).toList();
 
-  log("🔍 Matching activities found: ${matchingActivities.length}");
-  
-  if (matchingActivities.isEmpty) {
-    showCustomSnackbar(context, 'Activity coming soon for "$title"');
-    return;
-  }
-  
+    log("🔍 Matching activities found: ${matchingActivities.length}");
+
+    if (matchingActivities.isEmpty) {
+      showCustomSnackbar(context, 'Activity coming soon for "$title"');
+      return;
+    }
+
     final activityId = matchingActivities.first.id;
-     print('🔍 Sending activityId: $activityId for title: $title');
+    print('🔍 Sending activityId: $activityId for title: $title');
 
-          if (title == "Yoga") {
-        CustomSmoothNavigator.push(
-          context,
-          YogaScreen(activityId: activityId),
-        );
-        return;
-      }
-            if (title == "Zumba") {
-        CustomSmoothNavigator.push(
-          context,
-          ZumbaScreen(activityId: activityId),
-        );
-        return;
-      }
+    if (title == "Yoga") {
+      CustomSmoothNavigator.push(
+        context,
+        YogaScreen(activityId: activityId),
+      );
+      return;
+    }
+    if (title == "Zumba") {
+      CustomSmoothNavigator.push(
+        context,
+        ZumbaScreen(activityId: activityId),
+      );
+      return;
+    }
 
     try {
       setState(() {
