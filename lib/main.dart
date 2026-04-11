@@ -60,17 +60,17 @@ Future<void> verifyStoredTokensAtStartup() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  await FCMService.init();
+
   final sharedPrefs = await SharedPreferences.getInstance();
   final prefsService = SharedPreferencesService(sharedPrefs);
   final secureStorage = SecureStorageService();
   GetItService().setupLocator();
 
-  // ✅ Add token verification at startup
+  await FCMService.init();
   await verifyStoredTokensAtStartup();
 
   runApp(
@@ -83,7 +83,6 @@ void main() async {
   );
 }
 
-// ✅ Rest of your MyApp class remains the same
 class MyApp extends StatelessWidget {
   final AuthRepository authRepository = AuthRepository();
   final ProfileRepository profileRepository = ProfileRepository();

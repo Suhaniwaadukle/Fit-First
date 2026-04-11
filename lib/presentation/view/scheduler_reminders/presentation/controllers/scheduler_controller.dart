@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orka_sports/app/routes/routes_constants.dart';
 import 'package:orka_sports/app/widgets/common_dialogs/common_dialogs.dart';
 import 'package:orka_sports/app/widgets/common_formatter/common_formatter.dart';

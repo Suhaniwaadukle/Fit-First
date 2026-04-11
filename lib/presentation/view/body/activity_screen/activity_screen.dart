@@ -1,6 +1,8 @@
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:orka_sports/core/constants/app_colors.dart';
 import 'package:orka_sports/core/utils/custom_smooth_navigation.dart';
 import 'package:orka_sports/data/models/activity_model/activity_list_model.dart';
@@ -33,39 +35,88 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     final activities = [
       {
         'icon': Icons.directions_walk,
         'title': 'Walking',
-        'desc': 'Track your daily walks and steps.',
         'color': AppColors.primary,
       },
       {
         'icon': Icons.directions_run,
         'title': 'Running',
-        'desc': 'Monitor your running sessions.',
+        'color': AppColors.primary,
+      },
+      {
+        'icon': Icons.hiking,
+        'title': 'Hiking',
         'color': AppColors.primary,
       },
       {
         'icon': Icons.pedal_bike,
         'title': 'Cycling',
-        'desc': 'Log your cycling workouts sessions.',
         'color': AppColors.primary,
       },
       {
         'icon': Icons.self_improvement,
         'title': 'Yoga',
-        'desc': 'Track your yoga and meditation sessions.',
         'color': AppColors.primary,
-
       },
       {
         'icon': Icons.sports_gymnastics,
         'title': 'Zumba',
-        'desc': 'Join fun and energetic Zumba dance workouts.',
         'color': AppColors.primary,
-
       },
+      // {
+      //   'icon': FontAwesomeIcons.handRock, // MMA
+      //   'title': 'MMA',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.fistRaised, // Boxing
+      //   'title': 'Boxing',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.userNinja, // Muay Thai
+      //   'title': 'Muay Thai',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.personRunning,
+      //   'title': 'Kickboxing',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.shieldAlt,
+      //   'title': 'BJJ',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.userShield,
+      //   'title': 'Judo',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.personBooth,
+      //   'title': 'Wrestling',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.personRunning,
+      //   'title': 'Karate',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.personDress,
+      //   'title': 'Taekwondo',
+      //   'color': AppColors.primary,
+      // },
+      // {
+      //   'icon': FontAwesomeIcons.userNinja,
+      //   'title': 'Kung Fu',
+      //   'color': AppColors.primary,
+      // },
     ];
 
     return Scaffold(
@@ -85,7 +136,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
             );
           } else if (state is ActivityListLoaded) {
             final getActivity = state.activities;
-
             if (getActivity.isEmpty) {
               return const Center(
                 child: Text(
@@ -95,75 +145,171 @@ class _ActivityScreenState extends State<ActivityScreen> {
               );
             }
 
-            return Padding(
-              padding: const EdgeInsets.all(18.0),
-              child: ListView(
-                children: activities.map((activity) {
-                  final title = activity['title'] as String;
-                  final icon = activity['icon'] as IconData;
-                  final desc = activity['desc'] as String;
-                  final color = activity['color'] as Color;
-
-                  final isLoading = _loadingActivity == title;
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10.0),
-                    child: Card(
-                      color: color,
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 28,
-                          child: isLoading
-                              ? const CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                          )
-                              : Icon(
-                            icon,
-                            color: AppColors.primary,
-                            size: 30,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.primary, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Your Fitness Dashboard',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                '• Monitor your daily workouts\n'
+                                    '• Track your steps and distance\n'
+                                    '• Monitor calories burned\n'
+                                    '• Stay on top of your fitness goals',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        title: Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.white,
+                        Expanded(
+                          flex: 1,
+                          child: Lottie.asset(
+                            'assets/Lottie/card.json',
+                            height: 100,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        subtitle: Text(
-                          desc,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Colors.white,
-                          ),
-                        ),
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                        onTap: isLoading
-                            ? null
-                            : () => _handleActivityTap(
-                          title: title,
-                          icon: icon,
-                          getActivity: getActivity,
-                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      "Explore activities",
+                      style: GoogleFonts.poppins(
+                        color: AppColors.primary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(height: 15),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossAxisCount = 4;
+                      final spacing = 14.0;
+                      final totalSpacing = spacing * (crossAxisCount - 1);
+                      final cardWidth = (constraints.maxWidth - totalSpacing) / crossAxisCount;
+                      final cardHeight = cardWidth * 1.2;
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: activities.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                          childAspectRatio: cardWidth / cardHeight,
+                        ),
+                        itemBuilder: (context, index) {
+                          final activity = activities[index];
+                          final title = activity['title'] as String;
+                          final color = activity['color'] as Color;
+                          final isLoading = _loadingActivity == title;
+
+                          return GestureDetector(
+                            onTap: isLoading
+                                ? null
+                                : () => _handleActivityTap(
+                              title: title,
+                              icon: activity['icon'],
+                              getActivity: getActivity,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [color.withOpacity(0.9), color],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 26,
+                                    backgroundColor: Colors.white,
+                                    child: isLoading
+                                        ? const CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                                    )
+                                        : (activity['icon'] is IconData
+                                        ? Icon(activity['icon'] as IconData, size: 28, color: AppColors.primary)
+                                        : FaIcon(activity['icon'] as FaIconData, size: 28, color: AppColors.primary)),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Flexible(
+                                    child: Text(
+                                      title,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
             );
           }
-
           return const SizedBox.shrink();
         },
       ),
@@ -172,24 +318,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   Future<void> _handleActivityTap({
     required String title,
-    required IconData icon,
+    required dynamic icon,
     required List<ActivityListItem> getActivity,
-  }) async {
+  }) async
+  {
+    print("🔍 User tapped: '$title'");
 
+    print("All activities: ${getActivity.map((e) => e.name).toList()}");
+    print("Clicked: $title");
 
-
-    // 🔍 Debug: Print all available activities
-    log("🔍 Available activities from API:");
-    for (var activity in getActivity) {
-      log("🔍 - '${activity.name}' (ID: ${activity.id})");
-    }
-    log("🔍 User tapped: '$title'");
-
-    final matchingActivities = getActivity.where((act) =>
-    act.name.trim().toLowerCase() == title.trim().toLowerCase()
-    ).toList();
-
-    log("🔍 Matching activities found: ${matchingActivities.length}");
+    final matchingActivities = getActivity
+        .where((act) => act.name.trim().toLowerCase() ==
+        title.trim().toLowerCase())
+        .toList();
 
     if (matchingActivities.isEmpty) {
       showCustomSnackbar(context, 'Activity coming soon for "$title"');
@@ -197,20 +338,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
 
     final activityId = matchingActivities.first.id;
-    print('🔍 Sending activityId: $activityId for title: $title');
 
     if (title == "Yoga") {
-      CustomSmoothNavigator.push(
-        context,
-        YogaScreen(activityId: activityId),
-      );
+      CustomSmoothNavigator.push(context, YogaScreen(activityId: activityId));
       return;
     }
+
     if (title == "Zumba") {
-      CustomSmoothNavigator.push(
-        context,
-        ZumbaScreen(activityId: activityId),
-      );
+      CustomSmoothNavigator.push(context, ZumbaScreen(activityId: activityId));
       return;
     }
 
@@ -220,9 +355,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
       });
 
       final prefs = await SharedPreferences.getInstance();
-
-
-
 
       if (title == "Walking") {
         final walkData = await _activityRepository.getWalkRecommendation();
@@ -236,17 +368,23 @@ class _ActivityScreenState extends State<ActivityScreen> {
         final cyclingData = await _activityRepository.getCyclingRecommendation();
         await prefs.setString("recommended_distance_km", cyclingData.recommendedDistancePerDay);
         await prefs.setString("goal", cyclingData.fitnessGoal);
+      } else if (title == "Hiking") {
+        final hikingData = await _activityRepository.getHikingRecommendation();
+        await prefs.setString("recommended_distance_km", hikingData.distance);
+        await prefs.setString("goal", hikingData.fitnessGoal);
       }
 
       if (!mounted) return;
-      final distanceKm = RegExp(r'[\d.]+').stringMatch(prefs.getString("recommended_distance_km").toString());
+      final distanceKm = RegExp(r'[\d.]+')
+          .stringMatch(prefs.getString("recommended_distance_km").toString());
+
       CustomSmoothNavigator.push(
         context,
         ActivitySessionScreen(
           activityType: title,
           activityIcon: icon,
           activityId: activityId,
-          yourGoal: prefs.getString("goal").toString() == "" || prefs.getString("goal") == null
+          yourGoal: prefs.getString("goal").toString().isEmpty
               ? "YOUR GOAL"
               : prefs.getString("goal").toString(),
           distanceGoal: double.parse(distanceKm ?? '0'),
@@ -254,8 +392,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
         ),
       );
     } catch (e) {
-      log("Error fetching recommendation: $e");
-      showCustomSnackbar(context, 'Failed to fetch $title recommendation. Please calculated your BMI');
+      print("Error fetching recommendation: $e");
+      showCustomSnackbar(
+          context, 'Failed to fetch $title recommendation. Please calculate your BMI');
     } finally {
       setState(() {
         _loadingActivity = null;

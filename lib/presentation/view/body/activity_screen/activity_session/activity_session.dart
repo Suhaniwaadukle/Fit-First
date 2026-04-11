@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart' as loc; // Alias to avoid conflict
-import 'package:orka_sports/app/widgets/appbar/appbar.dart';
+import 'package:location/location.dart' as loc;
+import 'package:lottie/lottie.dart' hide Marker;
 import 'package:orka_sports/app/widgets/common_buttons_textforms/button_textforms.dart';
 import 'package:orka_sports/core/constants/app_colors.dart';
 import 'package:orka_sports/core/services/road_service.dart';
@@ -19,15 +19,17 @@ import 'package:orka_sports/presentation/blocs/activity_subcategory/activity_sub
 import 'package:orka_sports/presentation/blocs/location/location_event.dart';
 import 'package:orka_sports/presentation/blocs/profile/profile_bloc.dart';
 import 'package:orka_sports/presentation/blocs/location/location_bloc.dart';
-import 'package:orka_sports/presentation/blocs/location/location_state.dart' as AppLocationState; // Alias
-import 'package:orka_sports/presentation/view/body/activity_screen/history_screen/history_screen.dart';
+import 'package:orka_sports/presentation/blocs/location/location_state.dart' as AppLocationState;
 import 'package:orka_sports/presentation/view/body/gear_screen/gear_screen.dart';
 import 'package:orka_sports/presentation/view/body/nutrition_screen/nutrition_screen.dart';
 import 'package:orka_sports/presentation/widgets/show_customsnackbar.dart';
+import 'package:pedometer/pedometer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../history_screen/TaskScreen.dart';
+import '../history_screen/history_screen.dart';
 
 class ActivitySessionScreen extends StatefulWidget {
-  final String activityType; // e.g., "Walking", "Running", "Cycling"
+  final String activityType;
   final IconData activityIcon;
   final String activityId;
   final String yourGoal;
@@ -54,60 +56,63 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   String goalType = 'Distance';
   final List<String> goalTypes = ['Distance', 'Time'];
   int _currentIndex = 0;
-
   DateTime? _startTime;
   Timer? _activityTimer;
   int _durationSeconds = 0;
-
   final loc.Location _locationController = loc.Location();
   StreamSubscription<loc.LocationData>? _locationSubscription;
-  final Completer<GoogleMapController> _mapCompleter = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _mapCompleter =
+  Completer<GoogleMapController>();
   GoogleMapController? _mapController;
-
   LatLng? _initialMapCenter;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   final List<LatLng> _routeCoordinates = [];
-
-  // ADD THESE VARIABLES FOR ROAD FOLLOWING
   List<LatLng> _roadSnappedCoordinates = [];
-
   String _sourceLat = "0.0";
   String _sourceLng = "0.0";
   String _destinationLat = "0.0";
   String _destinationLng = "0.0";
-
+  bool _isPaused = false;
+  bool _isPausing = false;
+  DateTime? _pauseStartTime;
+  int _totalPausedSeconds = 0;
   double _liveGpsDistanceKm = 0.0;
-  String _avgPace = "00:00"; // Will be recalculated with final distance
-
+  String _avgPace = "00:00";
   String _liveCalculatedCaloriesBurned = "0.0";
-
   double _maxSpeed = 0.0;
   int _overSpeedingCount = 0;
   double _totalElevationGain = 0.0;
   double _lastElevation = 0.0;
-  double _weight = 70.0; // Default, will try to fetch from profile
+  double _weight = 70.0;
   bool _isStopping = false;
-
-  Marker? _userMarker;
+  StreamSubscription<StepCount>? _stepCountStream;
+  bool _goalCompleted = false;
 
   @override
   void initState() {
     super.initState();
     context.read<ActivityListBloc>().add(LoadActivityList());
 
-    _requestPermissions(); // Combines location and health permissions
+    _requestPermissions();
     log('ActivitySessionScreen initialized with activity Id: ${widget.activityId}');
     final locationBlocState = context.read<LocationBloc>().state;
     if (locationBlocState is AppLocationState.LocationLoaded) {
-      _initialMapCenter = LatLng(locationBlocState.latitude, locationBlocState.longitude);
-      _updateUserMarker(_initialMapCenter!);
+      _initialMapCenter =
+          LatLng(locationBlocState.latitude, locationBlocState.longitude);
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: _initialMapCenter!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure),
+        ),
+      );
     } else {
-      _initialMapCenter = const LatLng(22.17, 70.79); // Default
+      _initialMapCenter = const LatLng(23.2599, 77.4126);
       context.read<LocationBloc>().add(FetchLocationEvent());
     }
 
-    // Fetch user weight from ProfileBloc
     final profileState = context.read<ProfileBloc>().state;
     if (profileState is ProfileLoaded) {
       final weightString = profileState.profile.weight;
@@ -117,13 +122,15 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       }
     } else {
       log("Profile not loaded at initState, using default weight: $_weight kg");
-      // Consider dispatching an event to load profile if necessary and listen for it
     }
-    distanceGoal = (widget.distanceGoal == 0 || widget.distanceGoal == 0.0) ? 3.5 : widget.distanceGoal;
+
+    distanceGoal =
+    (widget.distanceGoal == 0 || widget.distanceGoal == 0.0)
+        ? 3.5
+        : widget.distanceGoal;
   }
 
   Future<void> _requestPermissions() async {
-    // Location Permissions only
     bool serviceEnabled = await _locationController.serviceEnabled();
     if (!serviceEnabled) {
       serviceEnabled = await _locationController.requestService();
@@ -134,7 +141,8 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       }
     }
 
-    loc.PermissionStatus permissionStatus = await _locationController.hasPermission();
+    loc.PermissionStatus permissionStatus =
+    await _locationController.hasPermission();
     if (permissionStatus == loc.PermissionStatus.denied) {
       permissionStatus = await _locationController.requestPermission();
       if (permissionStatus != loc.PermissionStatus.granted) {
@@ -145,6 +153,11 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     }
 
     log("Only location permissions requested. Health Connect disabled.");
+    await _locationController.changeSettings(
+      accuracy: loc.LocationAccuracy.high,
+      interval: 2000,
+      distanceFilter: 5,
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -152,44 +165,54 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       _mapCompleter.complete(controller);
     }
     _mapController = controller;
-    if (_initialMapCenter != null && mounted) {
-      controller.animateCamera(CameraUpdate.newLatLngZoom(_initialMapCenter!, 15.0));
-      // If not already started, ensure user marker is at initial/current known loc
-      if (!isStarted && _initialMapCenter != null) {
-        _updateUserMarker(_initialMapCenter!);
-      }
+    if (_initialMapCenter != null) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _mapController != null) {
+          _mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(
+                target: _initialMapCenter!,
+                zoom: 15.0,
+              ),
+            ),
+          );
+        }
+      });
     }
   }
 
-  _updateUserMarker(LatLng position) {
+  void _updateUserMarker(LatLng position) {
     if (!mounted) return;
     setState(() {
-      _userMarker = Marker(
-        markerId: const MarkerId('user_location'),
-        position: position,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // A different color for live tracking
+      _markers.removeWhere((m) => m.markerId.value == 'user_location');
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure),
+        ),
       );
-      _markers.add(_userMarker!);
     });
   }
 
   void _startActivityTimer() {
     _activityTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+      if (!mounted) { timer.cancel(); return; }
+      if (_isPaused) return;
+
       setState(() {
         _durationSeconds++;
-        if (_liveGpsDistanceKm > 0) {
-          _avgPace = _formatPace(_liveGpsDistanceKm, _durationSeconds);
-        } else {
-          _avgPace = "0.00";
-        }
-        // Live calorie update using MET formula
+
+        int activeSeconds = _durationSeconds - _totalPausedSeconds;
+
+        _avgPace = _liveGpsDistanceKm > 0
+            ? _formatPace(_liveGpsDistanceKm, activeSeconds)
+            : "0.00";
+
         _liveCalculatedCaloriesBurned = _calculateCaloriesBurned(
           _liveGpsDistanceKm,
-          _durationSeconds,
+          activeSeconds,
           _weight,
         ).toStringAsFixed(1);
       });
@@ -205,8 +228,12 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     return "$hours:$minutes:$seconds";
   }
 
-  double _calculateCaloriesBurned(double distanceKm, int durationSeconds, double weight) {
+  double _calculateCaloriesBurned(
+      double distanceKm, int durationSeconds, double weight)
+  {
+    if (distanceKm <= 0) return 0;
     double met = 0.0;
+
     switch (widget.activityType) {
       case 'Walking':
         met = 3.5;
@@ -217,12 +244,17 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       case 'Cycling':
         met = 7.5;
         break;
+      case 'Hiking':
+        met = 6.0;
+        break;
       default:
         met = 3.5;
     }
+
     double durationHours = durationSeconds / 3600;
     double calories = met * weight * durationHours;
-    return calories; // Raw value, format when displaying/saving
+
+    return calories;
   }
 
   void _checkOverspeeding(double currentSpeed) {
@@ -243,14 +275,295 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     if (currentSpeed > speedLimit) _overSpeedingCount++;
   }
 
+  Future<void> _checkGoalCompletion() async {
+    if (!_goalCompleted && _liveGpsDistanceKm >= distanceGoal) {
+      setState(() {
+        _goalCompleted = true;
+      });
+      await _stopSession();
+      log("Goal completed! Distance: $_liveGpsDistanceKm km / Goal: $distanceGoal km");
+      _activityTimer?.cancel();
+      _locationSubscription?.cancel();
+      _showGoalCompletedDialog();
+    }
+  }
+
+  Future<void> _showGoalCompletedDialog() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.18),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.75),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 28, horizontal: 20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text(
+                            '🏆',
+                            style: TextStyle(fontSize: 38),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Goal Completed!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Amazing work! You crushed your target.',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.88),
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _goalStatChip(
+                        icon: Icons.flag_rounded,
+                        color: Colors.green,
+                        label: 'Goal',
+                        value:
+                        '${distanceGoal.toStringAsFixed(1)} km',
+                      ),
+                      Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.shade200),
+                      _goalStatChip(
+                        icon: Icons.location_on_rounded,
+                        color: AppColors.primary,
+                        label: 'Covered',
+                        value:
+                        '${_liveGpsDistanceKm.toStringAsFixed(2)} km',
+                      ),
+                      Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.shade200),
+                      _goalStatChip(
+                        icon: Icons.local_fire_department_rounded,
+                        color: Colors.orange,
+                        label: 'Calories',
+                        value: '$_liveCalculatedCaloriesBurned kcal',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 24, indent: 20, endIndent: 20),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(widget.activityIcon,
+                          size: 17, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.activityType,
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+                Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            CustomSmoothNavigator.push(
+                              context,
+                              TaskScreen(
+                                activityType: widget.activityType,
+                                activityIcon: widget.activityIcon,
+                                distanceCovered: _liveGpsDistanceKm,
+                                durationFormatted: _formatDuration(_durationSeconds),
+                                caloriesBurned: _liveCalculatedCaloriesBurned,
+                                avgPace: _avgPace,
+                                elevationGain: _totalElevationGain.toStringAsFixed(1),
+                                overSpeedingCount: _overSpeedingCount,
+                                routeCoordinates: _routeCoordinates,
+                                markers: _markers,
+                                polylines: _polylines,
+                                startLatLng: _initialMapCenter,
+                              ),
+                            );
+                          },
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.bar_chart_rounded,
+                                  color: Colors.white, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'See Activity',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: AppColors.primary.withOpacity(0.5)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                          },
+                          child: Text(
+                            'Continue Activity',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _goalStatChip({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Colors.black45,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _startSession() async {
+    log(">>> START SESSION CALLED for: ${widget.activityType}");
     setState(() {
       isStarted = true;
       _startTime = DateTime.now();
       _durationSeconds = 0;
       _liveGpsDistanceKm = 0.0;
       _routeCoordinates.clear();
-      // ADD THIS LINE FOR ROAD FOLLOWING
       _roadSnappedCoordinates.clear();
       _markers.clear();
       _polylines.clear();
@@ -260,24 +573,39 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       _totalElevationGain = 0.0;
       _lastElevation = 0.0;
       _maxSpeed = 0.0;
+      _isPaused = false;
+      _isPausing = false;
+      _pauseStartTime = null;
+      _totalPausedSeconds = 0;
+      _goalCompleted = false;
     });
 
     _startActivityTimer();
 
     try {
-      loc.LocationData? currentLocation = await _locationController.getLocation();
-      if (currentLocation.latitude != null && currentLocation.longitude != null) {
+      loc.LocationData? currentLocation =
+      await _locationController.getLocation();
+
+      if (currentLocation.latitude != null &&
+          currentLocation.longitude != null) {
         _sourceLat = currentLocation.latitude!.toString();
         _sourceLng = currentLocation.longitude!.toString();
-
-        final startLatLng = LatLng(currentLocation.latitude!, currentLocation.longitude!);
+        final startLatLng =
+        LatLng(currentLocation.latitude!, currentLocation.longitude!);
         _routeCoordinates.add(startLatLng);
         _addMarker(startLatLng, "start_marker", "Start Point");
         _updateUserMarker(startLatLng);
-
-        if (_mapController != null) {
-          _mapController!.animateCamera(CameraUpdate.newLatLngZoom(startLatLng, 17.0));
-        }
+        final controller = await _mapCompleter.future;
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: startLatLng,
+              zoom: 18,
+              tilt: 45,
+              bearing: 0,
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -288,14 +616,20 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     const double minMovementThresholdMeters = 5;
     const double minSpeedThresholdKmph = 0.5;
 
-    _locationSubscription = _locationController.onLocationChanged.listen((loc.LocationData newLocation) async {
+    _locationSubscription = _locationController.onLocationChanged
+        .listen((loc.LocationData newLocation) async {
+      if (_isPaused) return;
+
       if (newLocation.latitude != null &&
           newLocation.longitude != null &&
           newLocation.accuracy != null &&
           newLocation.accuracy! <= 20.0 &&
           mounted) {
-        final newLatLng = LatLng(newLocation.latitude!, newLocation.longitude!);
-        final lastLatLng = _routeCoordinates.isNotEmpty ? _routeCoordinates.last : newLatLng;
+        final newLatLng =
+        LatLng(newLocation.latitude!, newLocation.longitude!);
+        final lastLatLng = _routeCoordinates.isNotEmpty
+            ? _routeCoordinates.last
+            : newLatLng;
 
         double segmentDistance = Geolocator.distanceBetween(
           lastLatLng.latitude,
@@ -306,20 +640,24 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
 
         double currentSpeedKmph = (newLocation.speed != null)
             ? newLocation.speed! * 3.6
-            : (segmentDistance / 1000.0) / (1 / 3600); // fallback
+            : (segmentDistance / 1000.0) / (1 / 3600);
 
-        // Skip if distance or speed is too low (stationary or drift)
-        if (segmentDistance < minMovementThresholdMeters || currentSpeedKmph < minSpeedThresholdKmph) {
+        if (segmentDistance < minMovementThresholdMeters ||
+            currentSpeedKmph < minSpeedThresholdKmph) {
           return;
         }
 
         _updateUserMarker(newLatLng);
 
         setState(() {
+          // ✅ GPS se live distance update
           _liveGpsDistanceKm += segmentDistance / 1000.0;
 
           _checkOverspeeding(currentSpeedKmph);
-          if (currentSpeedKmph > _maxSpeed) _maxSpeed = currentSpeedKmph;
+
+          if (currentSpeedKmph > _maxSpeed) {
+            _maxSpeed = currentSpeedKmph;
+          }
 
           if (newLocation.altitude != null) {
             double currentElevation = newLocation.altitude!;
@@ -334,10 +672,14 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
           _destinationLng = newLocation.longitude!.toString();
         });
 
-        // ADD ROAD SNAPPING LOGIC - Snap every 5 GPS points
+        // ── NEW: check goal after every distance update ────────────────
+        _checkGoalCompletion();
+        // ─────────────────────────────────────────────────────────────
+
         if (_routeCoordinates.length % 5 == 0) {
           try {
-            final snappedPoints = await RoadService.snapToRoads(_routeCoordinates);
+            final snappedPoints =
+            await RoadService.snapToRoads(_routeCoordinates);
             if (mounted) {
               setState(() {
                 _roadSnappedCoordinates = snappedPoints;
@@ -345,20 +687,29 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
               });
             }
           } catch (e) {
-            log('Road snapping failed: $e');
-            // Fallback to GPS coordinates
             setState(() {
               _roadSnappedCoordinates = List.from(_routeCoordinates);
               _updatePolyline();
             });
           }
         } else {
-          // Update polyline with existing data
           _updatePolyline();
         }
 
-        if (_mapController != null) {
-          _mapController!.animateCamera(CameraUpdate.newLatLng(newLatLng));
+        try {
+          final controller = await _mapCompleter.future;
+          controller.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(
+                target: newLatLng,
+                zoom: 18,
+                tilt: 45,
+                bearing: newLocation.heading ?? 0,
+              ),
+            ),
+          );
+        } catch (e) {
+          log("Camera animate error: $e");
         }
       }
     });
@@ -374,19 +725,54 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
           position: position,
           infoWindow: InfoWindow(title: title),
           icon: BitmapDescriptor.defaultMarkerWithHue(
-            markerId == "start_marker" ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
+            markerId == "start_marker"
+                ? BitmapDescriptor.hueGreen
+                : BitmapDescriptor.hueRed,
           ),
         ),
       );
     });
   }
+
+  Future<void> _togglePause() async {
+    if (_isPausing) return;
+    _isPausing = true;
+    setState(() {});
+
+    try {
+      if (_isPaused) {
+        if (_pauseStartTime != null) {
+          _totalPausedSeconds +=
+              DateTime.now().difference(_pauseStartTime!).inSeconds;
+          _pauseStartTime = null;
+        }
+        _isPaused = false;
+        setState(() {});
+        log("Session Resumed | Total paused so far: $_totalPausedSeconds sec");
+      } else {
+        _pauseStartTime = DateTime.now();
+        _isPaused = true;
+        setState(() {});
+        log("Session Paused at $_pauseStartTime");
+      }
+    } catch (e) {
+      log("Pause/Resume error: $e");
+      if (mounted) {
+        showCustomSnackbar(context, "Pause/Resume mein error: $e");
+      }
+    } finally {
+      if (mounted) {
+        _isPausing = false;
+        setState(() {});
+      }
+    }
+  }
+
   void _updatePolyline() {
     if (!mounted) return;
-
     final coordinatesToUse = _roadSnappedCoordinates.isNotEmpty
         ? _roadSnappedCoordinates
         : _routeCoordinates;
-
     setState(() {
       _polylines.clear();
       _polylines.add(
@@ -400,7 +786,8 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     });
   }
 
-  Future<Map<String, double?>> _fetchHealthData(DateTime startTime, DateTime endTime) async {
+  Future<Map<String, double?>> _fetchHealthData(
+      DateTime startTime, DateTime endTime) async {
     log("Skipping health data fetch. Returning fallback values for GPS.");
     return {
       'distance': null,
@@ -409,16 +796,30 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   }
 
   Future<void> _stopSession() async {
-    if (_activityTimer!.isActive) _activityTimer?.cancel();
+    if (_isPaused && _pauseStartTime != null) {
+      _totalPausedSeconds +=
+          DateTime.now().difference(_pauseStartTime!).inSeconds;
+      _pauseStartTime = null;
+    }
+    _isPaused = false;
+    _stepCountStream?.cancel();
+    if (_activityTimer != null && _activityTimer!.isActive) {
+      _activityTimer?.cancel();
+    }
     _locationSubscription?.cancel();
+
     final DateTime endTime = DateTime.now();
+
     try {
-      loc.LocationData? finalLocation = await _locationController.getLocation();
+      loc.LocationData? finalLocation =
+      await _locationController.getLocation();
       if (finalLocation.latitude != null && finalLocation.longitude != null) {
         _destinationLat = finalLocation.latitude!.toString();
         _destinationLng = finalLocation.longitude!.toString();
-        final finalLatLng = LatLng(finalLocation.latitude!, finalLocation.longitude!);
-        if (_routeCoordinates.isNotEmpty && _routeCoordinates.last != finalLatLng) {
+        final finalLatLng =
+        LatLng(finalLocation.latitude!, finalLocation.longitude!);
+        if (_routeCoordinates.isNotEmpty &&
+            _routeCoordinates.last != finalLatLng) {
           _routeCoordinates.add(finalLatLng);
         }
         _addMarker(finalLatLng, "end_marker", "End Point");
@@ -431,12 +832,14 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       isStarted = false;
     });
 
-    // Fetch data from HealthKit/Google Fit
-    Map<String, double?> healthMetrics = await _fetchHealthData(_startTime!, endTime);
+    int activeDurationSeconds = _durationSeconds - _totalPausedSeconds;
+    if (activeDurationSeconds < 0) activeDurationSeconds = 0;
+
+    Map<String, double?> healthMetrics =
+    await _fetchHealthData(_startTime!, endTime);
     double? healthDistanceMeters = healthMetrics['distance'];
     double? healthCaloriesKcal = healthMetrics['calories'];
 
-    // Determine final distance
     double finalDistanceKm;
     if (healthDistanceMeters != null && healthDistanceMeters > 0) {
       finalDistanceKm = healthDistanceMeters / 1000.0;
@@ -449,32 +852,34 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       }
     }
 
-    // Determine final calories
     String finalCaloriesBurned;
     if (healthCaloriesKcal != null && healthCaloriesKcal > 0) {
       finalCaloriesBurned = healthCaloriesKcal.toStringAsFixed(1);
       log("Using Health calories: $finalCaloriesBurned kcal");
     } else {
-      finalCaloriesBurned = _calculateCaloriesBurned(finalDistanceKm, _durationSeconds, _weight).toStringAsFixed(1);
+      finalCaloriesBurned = _calculateCaloriesBurned(
+        finalDistanceKm,
+        activeDurationSeconds,
+        _weight,
+      ).toStringAsFixed(1);
       log("Using calculated calories: $finalCaloriesBurned kcal");
       if (mounted) {
-        showCustomSnackbar(context, "Using calculated calories due to health data issue.");
+        showCustomSnackbar(
+            context, "Using calculated calories due to health data issue.");
       }
     }
 
-    // Calculate final pace
-    String finalAvgPace = _formatPace(finalDistanceKm, _durationSeconds);
+    String finalAvgPace = _formatPace(finalDistanceKm, activeDurationSeconds);
     log("Final pace: $finalAvgPace min/km");
 
-    // Format duration
-    String formattedDuration = _formatDuration(_durationSeconds);
+    String formattedDuration = _formatDuration(activeDurationSeconds);
     log("Final duration: $formattedDuration");
 
-    // Format elevation gain
     String formattedElevation = _totalElevationGain.toStringAsFixed(1);
     log("Final elevation gain: $formattedElevation m");
 
-    final userId = await SharedPreferences.getInstance().then((prefs) => prefs.getString('userId'));
+    final userId = await SharedPreferences.getInstance()
+        .then((prefs) => prefs.getString('userId'));
     if (userId == null) {
       if (mounted) {
         showCustomSnackbar(context, 'User ID not found. Cannot save activity.');
@@ -485,27 +890,26 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     String? apiActivityId;
     switch (widget.activityType) {
       case 'Walking':
-        apiActivityId = widget.activityId;
-        break;
       case 'Running':
-        apiActivityId = widget.activityId;
-        break;
       case 'Cycling':
+      case 'Hiking':
         apiActivityId = widget.activityId;
         break;
       default:
-        if (mounted) {
-          showCustomSnackbar(context, 'Unknown activity type: ${widget.activityType}');
-        }
-        return;
+        log(">>> activityType value is: '${widget.activityType}'");
+        apiActivityId = widget.activityId;
+        break;
     }
 
     if (apiActivityId.isEmpty) {
       if (mounted) {
-        showCustomSnackbar(context, 'Activity ID for ${widget.activityType} not found in profile.');
+        showCustomSnackbar(context,
+            'Activity ID for ${widget.activityType} not found in profile.');
       }
       return;
     }
+    _totalPausedSeconds = 0;
+
     final activityToSave = ActivityData(
       activityId: apiActivityId,
       activityName: widget.activityType,
@@ -528,26 +932,40 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     }
   }
 
-  Future<void> _handleRewardLogic({required double finalActualDistance}) async {
+  Future<void> _handleRewardLogic(
+      {required double finalActualDistance}) async
+  {
     try {
       if (widget.activityType == "Walking") {
         final value = await widget.activityRepo.getDailyWalkRecommendation(
           actualDistance: finalActualDistance,
         );
         log("coind today : ${value.coinsAwardedToday} : ${value.toString()}");
-        await _showCoinsAwardedDialog(value.coinsAwardedToday, value.popupRequired);
-      } else if (widget.activityType == "Running") {
+        await _showCoinsAwardedDialog(
+            value.coinsAwardedToday, value.popupRequired);
+      }
+      else if (widget.activityType == "Running") {
         final value = await widget.activityRepo.getDailyRunRecommendation(
           actualDistance: finalActualDistance,
         );
-        await _showCoinsAwardedDialog(value.coinsAwardedToday, value.popupRequired);
+        await _showCoinsAwardedDialog(
+            value.coinsAwardedToday, value.popupRequired);
       } else if (widget.activityType == "Cycling") {
         final value = await widget.activityRepo.getDailyCyclingRecommendation(
           actualDistance: finalActualDistance,
         );
-        await _showCoinsAwardedDialog(value.coinsAwardedToday, value.popupRequired);
+        await _showCoinsAwardedDialog(
+            value.coinsAwardedToday, value.popupRequired);
       }
-    } catch (e) {
+      else if (widget.activityType == "Hiking") {
+        final value = await widget.activityRepo.getDailyHikingRecommendation(
+          actualDistance: finalActualDistance,
+        );
+        await _showCoinsAwardedDialog(
+            value.coinsAwardedToday, value.popupRequired);
+      }
+    }
+      catch (e) {
       log("Reward logic error: $e");
     }
   }
@@ -556,13 +974,13 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     if (!mounted) return;
 
     if (coinsAwarded == 0) {
-      await showGoalRestrictionPopup(context, distanceGoal.toString()); // Add `await`
+      await showGoalRestrictionPopup(context, distanceGoal.toString());
     } else {
       await showDialog(
-        // Add `await`
         context: context,
         builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text("🎉 Congratulations!"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -622,20 +1040,27 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   void dispose() {
     _activityTimer?.cancel();
     _locationSubscription?.cancel();
-    _mapController?.dispose();
+    _stepCountStream?.cancel();
+    if (_mapCompleter.isCompleted) {
+      _mapController?.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> showGoalRestrictionPopup(BuildContext context, String distanceGoal) {
+  Future<void> showGoalRestrictionPopup(
+      BuildContext context, String distanceGoal)
+  {
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: AppColors.kWhite, // dark background
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.kWhite,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20),
+            padding:
+            const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -664,10 +1089,15 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
                       child: ButtonWidget(
                         text: "Cancel",
                         borderRadius: BorderRadius.circular(15),
-                        backgroundColor: WidgetStatePropertyAll(AppColors.kPrimaryColor),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineSmall?.copyWith(color: AppColors.kWhite, fontWeight: FontWeight.bold),
+                        backgroundColor:
+                        WidgetStatePropertyAll(AppColors.kPrimaryColor),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(
+                          color: AppColors.kWhite,
+                          fontWeight: FontWeight.bold,
+                        ),
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
@@ -685,13 +1115,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentMarkers = Set<Marker>.from(_markers);
-
-    if (_userMarker != null) {
-      currentMarkers.removeWhere((m) => m.markerId.value == 'user_location');
-      currentMarkers.add(_userMarker!);
-    }
-
     return BlocListener<ActivityBloc, ActivityState>(
       listener: (context, state) {
         if (state is ActivityLoading) {
@@ -706,14 +1129,12 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.white,
-
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () {
               Navigator.pop(context);
             },
           ),
-
           title: const Text(
             "Activity",
             style: TextStyle(
@@ -730,65 +1151,108 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
               ? Column(
             children: [
               SizedBox(
-                height: 200,
+                height: 260,
                 width: double.infinity,
-                child: BlocListener<LocationBloc, AppLocationState.LocationState>(
+                child: BlocListener<LocationBloc,
+                    AppLocationState.LocationState>(
                   listener: (context, locState) {
-                    if (locState is AppLocationState.LocationLoaded && !isStarted && mounted) {
-                      final newCenter = LatLng(locState.latitude, locState.longitude);
+                    if (locState is AppLocationState.LocationLoaded &&
+                        mounted) {
+                      final newCenter = LatLng(
+                          locState.latitude, locState.longitude);
                       _updateUserMarker(newCenter);
                       if (_mapController != null) {
-                        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(newCenter, 15.0));
+                        _mapController!.animateCamera(
+                          CameraUpdate.newLatLngZoom(newCenter, 15.0),
+                        );
                       } else {
-                        // If map not created yet, update initial center for when it is
                         setState(() {
                           _initialMapCenter = newCenter;
                         });
                       }
                     }
                   },
-                  child: GoogleMap(
+                  child: _initialMapCenter != null
+                      ? GoogleMap(
                     onMapCreated: _onMapCreated,
                     initialCameraPosition: CameraPosition(
-                      target: _initialMapCenter ?? const LatLng(0, 0), // Default if still null
+                      target: _initialMapCenter!,
                       zoom: 15.0,
                     ),
-                    markers: currentMarkers, // Use the dynamic set
-                    polylines: _polylines,
-                    myLocationEnabled: false, // Using custom marker
-                    myLocationButtonEnabled: false,
+                    markers: Set<Marker>.from(_markers),
+                    polylines: Set<Polyline>.from(_polylines),
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
                     zoomControlsEnabled: true,
-                    buildingsEnabled: false, // ADD THIS LINE TO FIX FLOATING POLYLINES
-                    padding: const EdgeInsets.only(bottom: 20),
+                    buildingsEnabled: false,
+                    compassEnabled: true,
+                    mapToolbarEnabled: false,
+                    padding: const EdgeInsets.only(bottom: 8),
+                  )
+                      : const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text("Fetching location..."),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              Expanded(child: isStarted ? _buildInProgressUI(context) : _buildGoalUI(context)),
+
+              Expanded(
+                child: isStarted
+                    ? _buildInProgressUI(context)
+                    : _buildGoalUI(context),
+              ),
             ],
           )
-              : HistoryScreen(),
+              : HistoryScreen(activityType: widget.activityType),
         ),
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            isStarted
-                ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-              child: SizedBox(
+            if (_currentIndex == 0)
+              isStarted
+                  ? Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0, vertical: 24.0),
+                child: Container(
                   width: double.infinity,
-                  height: 56,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
+                  ),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 6,
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18)),
                     ),
                     onPressed: _isStopping
                         ? null
                         : () async {
                       setState(() => _isStopping = true);
-                      await _stopSession(); // reward logic is inside this
-                      if (mounted) setState(() => _isStopping = false);
+                      await _stopSession();
+                      if (mounted) {
+                        setState(() => _isStopping = false);
+                      }
                     },
                     child: _isStopping
                         ? const SizedBox(
@@ -800,31 +1264,57 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
                       ),
                     )
                         : const Text(
-                      'Stop',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      "Stop",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  )),
-            )
-                : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 6,
                   ),
-                  onPressed: _startSession,
-                  child: const Text(
-                    'Start',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              )
+                  : Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0, vertical: 24.0),
+                child: Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: _startSession,
+                    child: const Text(
+                      'Start',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
                   ),
                 ),
               ),
-            ),
+
             _buildBottomBar(context),
           ],
         ),
@@ -833,117 +1323,203 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   }
 
   Widget _buildGoalUI(BuildContext context) {
+    String lottiePath = "assets/Lottie/Running.json";
+
+    if (widget.activityType.toLowerCase().contains("cycling")) {
+      lottiePath = "assets/Lottie/Cycling.json";
+    } else if (widget.activityType.toLowerCase().contains("hiking")) {
+      lottiePath = "assets/Lottie/Hiking.json";
+    } else if (widget.activityType.toLowerCase().contains("walking")) {
+      lottiePath = "assets/Lottie/Walking.json";
+    }
+
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(26),
+          topRight: Radius.circular(26),
+        ),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 24), // Reduced from 54
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 120,
+            child: Lottie.asset(
+              lottiePath,
+              repeat: true,
+            ),
+          ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 6,
+                shadowColor: Colors.black.withOpacity(.12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(22),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         widget.yourGoal,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 22),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.remove_circle, size: 36, color: Colors.grey),
+                            icon: const Icon(
+                              Icons.remove_circle,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
                             onPressed: decrementGoalDistance,
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            padding:
+                            const EdgeInsets.symmetric(horizontal: 28),
                             child: Text(
                               distanceGoal.toStringAsFixed(1),
-                              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              style: TextStyle(
+                                fontSize: 42,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle, size: 36, color: Colors.grey),
+                            icon: const Icon(
+                              Icons.add_circle,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
                             onPressed: incrementGoalDistance,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(widget.activityIcon, size: 20, color: Colors.black54),
-                          const SizedBox(width: 8),
-                          Text(widget.activityType, style: const TextStyle(fontSize: 16)),
-                        ],
+
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(widget.activityIcon,
+                                size: 18, color: Colors.black54),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.activityType,
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 26),
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 context.read<ActivitySubCategoryBloc>().add(
-                                  LoadSubCategories(activityId: widget.activityId, activityType: 'Nutrition'),
+                                  LoadSubCategories(
+                                    activityId: widget.activityId,
+                                    activityType: 'Nutrition',
+                                  ),
                                 );
+
                                 CustomSmoothNavigator.push(
                                   context,
-                                  NutritionScreen(activityId: widget.activityId, activityType: 'Nutrition'),
+                                  NutritionScreen(
+                                    activityId: widget.activityId,
+                                    activityType: 'Nutrition',
+                                  ),
                                 );
                               },
-                              icon: const Icon(Icons.restaurant_menu, color: Colors.white),
-                              label: const Text('Nutrition', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              icon: const Icon(Icons.restaurant_menu),
+                              label: const Text(
+                                'Nutrition',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                padding: const EdgeInsets.symmetric(vertical: 12), // Reduced from 14
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding:
+                                const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+
+                          const SizedBox(width: 14),
+
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 context.read<ActivitySubCategoryBloc>().add(
-                                  LoadSubCategories(activityId: widget.activityId, activityType: 'Gear'),
+                                  LoadSubCategories(
+                                    activityId: widget.activityId,
+                                    activityType: 'Gear',
+                                  ),
                                 );
+
                                 CustomSmoothNavigator.push(
                                   context,
-                                  GearScreen(activityId: widget.activityId, activityType: 'Gear'),
+                                  GearScreen(
+                                    activityId: widget.activityId,
+                                    activityType: 'Gear',
+                                  ),
                                 );
                               },
-                              icon: const Icon(Icons.sports_martial_arts, color: Colors.white),
-                              label: const Text('Gears', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              icon: const Icon(Icons.sports_martial_arts),
+                              label: const Text(
+                                'Gears',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                padding: const EdgeInsets.symmetric(vertical: 12), // Reduced from 14
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding:
+                                const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
                         ],
-                      ),
+                      )
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -958,92 +1534,265 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     String formattedCalories = _liveCalculatedCaloriesBurned;
     String formattedPace = _avgPace;
     String formattedElevation = _totalElevationGain.toStringAsFixed(1);
-
-    final statCards = [
-      _StatCard(
-        icon: Icons.timer,
-        label: 'Duration',
-        value: _formatDuration(_durationSeconds),
-        color: Colors.blue,
-      ),
-      _StatCard(
-        icon: Icons.location_on,
-        label: 'Distance',
-        value: '$formattedDistance km',
-        color: Colors.orange,
-      ),
-      _StatCard(
-        icon: Icons.local_fire_department,
-        label: 'Calories',
-        value: '$formattedCalories kcal',
-        color: Colors.red,
-      ),
-      _StatCard(
-        icon: Icons.speed,
-        label: 'Pace',
-        value: '$formattedPace km',
-        color: Colors.green,
-      ),
-      _StatCard(
-        icon: Icons.height,
-        label: 'Elevation',
-        value: '$formattedElevation m',
-        color: Colors.purple,
-      ),
-      _StatCard(
-        icon: Icons.warning,
-        label: 'Overspeeding',
-        value: _overSpeedingCount.toString(),
-        color: Colors.amber,
-      ),
-    ];
-
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              widget.activityType.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: CircularProgressIndicator(
-                    value: progressValue,
-                    strokeWidth: 8,
-                    backgroundColor: Colors.grey[200],
-                    color: AppColors.primary,
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${(progressValue * 100).toStringAsFixed(0)} %',
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            Center(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 190,
+                    height: 190,
+                    child: CircularProgressIndicator(
+                      value: progressValue,
+                      strokeWidth: 10,
+                      backgroundColor: Colors.grey[200],
+                      color: AppColors.primary,
                     ),
-                    if (goalType == 'Distance')
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        'of ${distanceGoal.toStringAsFixed(1)} km',
-                        style: const TextStyle(fontSize: 16, color: Colors.black54),
+                        widget.activityType.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54,
+                          letterSpacing: 1.5,
+                        ),
                       ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '${(progressValue * 100).toStringAsFixed(0)} %',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (goalType == 'Distance')
+                        Text(
+                          'of ${distanceGoal.toStringAsFixed(2)} km',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black45,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                _buildStatCell(
+                  icon: Icons.location_on,
+                  iconColor: Colors.orange,
+                  value: formattedDistance,
+                  label: 'km',
+                ),
+                const SizedBox(width: 20),
+                _buildStatCell(
+                  icon: Icons.timer,
+                  iconColor: Colors.blue,
+                  value: _formatDuration(_durationSeconds),
+                  label: 'Duration',
+                  isLarge: true,
+                ),
+                const SizedBox(width: 18),
+                _buildStatCell(
+                  icon: Icons.local_fire_department,
+                  iconColor: Colors.red,
+                  value: formattedCalories,
+                  label: 'Cal',
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            StatCardGrid(cards: statCards),
+            const SizedBox(height: 40),
+            Row(
+              children: [
+                _buildStatCell(
+                  icon: Icons.speed,
+                  iconColor: Colors.green,
+                  value: formattedPace,
+                  label: 'min/km',
+                ),
+                const SizedBox(width: 18),
+                _buildStatCell(
+                  icon: Icons.height,
+                  iconColor: Colors.purple,
+                  value: '$formattedElevation m',
+                  label: 'Elevation',
+                ),
+                const SizedBox(width: 18),
+                _buildStatCell(
+                  icon: Icons.warning,
+                  iconColor: Colors.amber,
+                  value: _overSpeedingCount.toString(),
+                  label: 'Overspeed',
+                ),
+              ],
+            ),
+            const SizedBox(height: 35),
+            Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _isPaused
+                    ? Colors.orange.withOpacity(0.08)
+                    : Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isPaused
+                      ? Colors.orange.withOpacity(0.35)
+                      : Colors.green.withOpacity(0.35),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _isPaused
+                          ? Colors.orange.withOpacity(0.18)
+                          : Colors.green.withOpacity(0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _isPaused ? Icons.pause_circle : Icons.favorite,
+                      color: _isPaused ? Colors.orange : Colors.green,
+                      size: 20,
+                    ),
+                  ),
 
-            const SizedBox(height: 16),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isPaused
+                              ? '⏸ Activity Paused'
+                              : '💡 Did You Know?',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black45,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _isPaused
+                              ? 'Taking short pauses during workouts helps muscles recover and prevents fatigue.'
+                              : 'Regular exercise reduces stress hormones like cortisol.',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (isStarted)
+                    GestureDetector(
+                      onTap: _isPausing ? null : _togglePause,
+                      child: Container(
+                        height: 50,
+                        width: 50,
+                        margin: const EdgeInsets.only(left: 8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.green.shade600,
+                              Colors.green.withOpacity(.7),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withOpacity(.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: _isPausing
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                              : Icon(
+                            _isPaused
+                                ? Icons.play_arrow
+                                : Icons.pause,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatCell({
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String label,
+    bool isLarge = false,
+  }) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isLarge ? 35 : 22,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: iconColor, size: isLarge ? 33 : 20),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isLarge ? 18 : 14,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1051,76 +1800,19 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
   Widget _buildBottomBar(BuildContext context) {
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
-      currentIndex: _currentIndex, // Use _currentIndex here
+      currentIndex: _currentIndex,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Start'),
         BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
       ],
       onTap: (index) {
         if (!isStarted) {
-          // Prevent switching tabs if an activity is in progress
           setState(() => _currentIndex = index);
         } else {
-          showCustomSnackbar(context, "Please stop the current activity before switching tabs.");
+          showCustomSnackbar(context,
+              "Please stop the current activity before switching tabs.");
         }
       },
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(label, style: const TextStyle(fontSize: 13, color: Colors.black54)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class StatCardGrid extends StatelessWidget {
-  final List cards;
-
-  const StatCardGrid({super.key, required this.cards});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: cards.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.2,
-      ),
-      itemBuilder: (context, index) => cards[index],
     );
   }
 }

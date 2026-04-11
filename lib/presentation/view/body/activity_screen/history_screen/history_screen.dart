@@ -28,16 +28,17 @@ int _weekDayIndex(String day) {
 
 class HistoryScreen extends StatefulWidget {
   final String? activityType;
-  const HistoryScreen({super.key, this.activityType});
+  const
+  HistoryScreen({super.key, this.activityType});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-
-  String _selectedActivity = "Walking";
   HistoryType selectedType = HistoryType.monthly;
+  String _selectedActivity = 'Running';
+
 
   @override
   void initState() {
@@ -64,12 +65,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
         return Icons.directions_walk;
       case 'cycling':
         return Icons.pedal_bike;
+      case 'hiking':
+        return Icons.hiking;
       default:
         return Icons.fitness_center;
     }
   }
 
   int _parseDurationToSeconds(String timeTaken) {
+    if (timeTaken == null || timeTaken.isEmpty) return 0;
     try {
       final parts = timeTaken.split(':');
       if (parts.length == 3) {
@@ -189,160 +193,114 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  List<double> _buildGraphData(List<ActivityData> activities) {
-
-    DateTime now = DateTime.now();
-
-    // GOAL GRAPH
-    if (_selectedActivity == "Goal") {
-
-      double walking = 0;
-      double running = 0;
-      double cycling = 0;
-
-      for (var a in activities) {
-
-        final name = (a.activityName ?? "").toLowerCase();
-        double dist = double.tryParse(a.distance) ?? 0;
-
-        if (name == "walking" || name == "walk") {
-          walking += dist;
-        }
-
-        if (name == "running" || name == "run") {
-          running += dist;
-        }
-
-        if (name == "cycling" || name == "cycle" || name == "bike") {
-          cycling += dist;
-        }
-      }
-
-      double walkGoal = 5;
-      double runGoal = 5;
-      double cycleGoal = 15;
-
-      double walkProgress = (walking / walkGoal).clamp(0.0, 1.0);
-      double runProgress = (running / runGoal).clamp(0.0, 1.0);
-      double cycleProgress = (cycling / cycleGoal).clamp(0.0, 1.0);
-
-      // MINIMUM visible bar if activity exists
-      if (walking > 0 && walkProgress < 0.05) {
-        walkProgress = 0.05;
-      }
-
-      if (running > 0 && runProgress < 0.05) {
-        runProgress = 0.05;
-      }
-
-      if (cycling > 0 && cycleProgress < 0.05) {
-        cycleProgress = 0.05;
-      }
-
-      return [
-        walkProgress,
-        runProgress,
-        cycleProgress,
-      ];
-    }
-
-    // WEEKLY
-    if (selectedType == HistoryType.weekly) {
-
-      List<double> weeklyData = List.filled(7, 0);
-
-      DateTime start = now.subtract(Duration(days: now.weekday - 1));
-
-      for (var a in activities) {
-
-        if (a.createdAt == null) continue;
-
-        DateTime date = DateTime.parse(a.createdAt!).toLocal();
-        int diff = date.difference(start).inDays;
-
-        if (diff >= 0 && diff < 7) {
-          weeklyData[diff] += 1;
-        }
-      }
-
-      return weeklyData;
-    }
-
-    // MONTHLY
-    List<double> monthlyData = List.filled(7, 0);
-
-    for (var a in activities) {
-
-      if (a.createdAt == null) continue;
-
-      DateTime date = DateTime.parse(a.createdAt!).toLocal();
-
-      int diff = (now.year - date.year) * 12 + now.month - date.month;
-
-      if (diff >= 0 && diff < 7) {
-        monthlyData[6 - diff] += 1;
-      }
-    }
-
-    return monthlyData;
-  }
-
   Widget _buildAnimatedGraph(List<ActivityData> activities) {
 
-    final data = _buildGraphData(activities);
+    List<double> _getGraphDataByActivity() {
+      if (selectedType == HistoryType.weekly) {
+        final weekLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        final Map<String, double> dayData = {for (var d in weekLabels) d: 0.0};
 
-    double maxY = _selectedActivity == "Goal"
-        ? 1
-        : (data.isNotEmpty ? data.reduce((a, b) => a > b ? a : b) + 1 : 1);
+        for (var a in activities) {
+          if (a.createdAt == null) continue;
+          final date = DateTime.parse(a.createdAt!).toLocal();
+          final dayName = DateFormat('EEEE').format(date);
+          if (!dayData.containsKey(dayName)) continue;
 
-    final weekLabels = ["M", "T", "W", "T", "F", "S", "S"];
+          switch (_selectedActivity) {
+            case 'Distance':
+              dayData[dayName] = (dayData[dayName] ?? 0) + (double.tryParse(a.distance ?? "0") ?? 0);
+              break;
+            case 'Duration':
+              dayData[dayName] = (dayData[dayName] ?? 0) + (_parseDurationToSeconds(a.timeTaken ?? "00:00:00") / 60.0);
+              break;
+            case 'Calories':
+              dayData[dayName] = (dayData[dayName] ?? 0) + (double.tryParse(a.caloriesBurned ?? "0") ?? 0);
+              break;
+            case 'Pace':
+              dayData[dayName] = (dayData[dayName] ?? 0) + (double.tryParse(a.avgPace ?? "0") ?? 0);
+              break;
+            default:
+              dayData[dayName] = (dayData[dayName] ?? 0) + (double.tryParse(a.distance ?? "0") ?? 0);
+          }
+        }
+        return weekLabels.map((d) => dayData[d] ?? 0.0).toList();
 
-    List<String> _getMonthLabels() {
+      } else {
+        DateTime now = DateTime.now();
+        final Map<String, double> monthData = {};
+        final monthLabels = <String>[];
 
-      final months = [
-        "Jan",
-        "Feb",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-      ];
+        for (int i = 6; i >= 0; i--) {
+          final dt = DateTime(now.year, now.month - i, 1);
+          final key = DateFormat('MMM yyyy').format(dt);
+          monthLabels.add(key);
+          monthData[key] = 0.0;
+        }
 
-      DateTime now = DateTime.now();
-      List<String> result = [];
+        for (var a in activities) {
+          if (a.createdAt == null) continue;
+          final date = DateTime.parse(a.createdAt!).toLocal();
+          final key = DateFormat('MMM yyyy').format(date);
+          if (!monthData.containsKey(key)) continue;
 
-      for (int i = 6; i >= 0; i--) {
-
-        int index = (now.month - i - 1) % 12;
-
-        if (index < 0) index += 12;
-
-        result.add(months[index]);
+          switch (_selectedActivity) {
+            case 'Distance':
+              monthData[key] = (monthData[key] ?? 0) + (double.tryParse(a.distance ?? "0") ?? 0);
+              break;
+            case 'Duration':
+              monthData[key] = (monthData[key] ?? 0) + (_parseDurationToSeconds(a.timeTaken ?? "0") / 60.0);
+              break;
+            case 'Calories':
+              monthData[key] = (monthData[key] ?? 0) + (double.tryParse(a.caloriesBurned ?? "0") ?? 0);
+              break;
+            case 'Pace':
+              monthData[key] = (monthData[key] ?? 0) + (double.tryParse(a.avgPace ?? "0") ?? 0);
+              break;
+            default:
+              monthData[key] = (monthData[key] ?? 0) + (double.tryParse(a.distance ?? "0") ?? 0);
+          }
+        }
+        return monthLabels.map((k) => monthData[k] ?? 0.0).toList();
       }
-
-      return result;
     }
 
-    final monthLabels = _getMonthLabels();
+    final data = _getGraphDataByActivity();
+    final maxY = data.isNotEmpty ? data.reduce((a, b) => a > b ? a : b) + 1 : 1.0;
 
-    final labels = _selectedActivity == "Goal"
-        ? ["Walk", "Run", "Cycle"]
-        : selectedType == HistoryType.weekly
-        ? weekLabels
-        : monthLabels;
+    List<String> _getLabels() {
+      if (selectedType == HistoryType.weekly) {
+        return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      } else {
+        final months = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
+        DateTime now = DateTime.now();
+        List<String> result = [];
+        for (int i = 6; i >= 0; i--) {
+          int index = (now.month - i - 1) % 12;
+          if (index < 0) index += 12;
+          result.add(months[index]);
+        }
+        return result;
+      }
+    }
 
-    final activitiesIcons = [
-      {'icon': Icons.directions_walk, 'title': 'Walking'},
-      {'icon': Icons.directions_run, 'title': 'Running'},
-      {'icon': Icons.pedal_bike, 'title': 'Cycling'},
-      {'icon': Icons.emoji_events, 'title': 'Goal'},
+    final labels = _getLabels();
+
+    final statCards = [
+      {'icon': _getActivityIcon(widget.activityType ?? 'running'), 'label': 'Running', 'color': Colors.green.shade700, 'title': (widget.activityType ?? 'Activities'),},
+      {'icon': Icons.emoji_events, 'label': 'Goal', 'color': Colors.teal.shade700,'title': 'Goal'},
+      {'icon': Icons.location_on, 'label': 'Distance', 'color': Colors.brown,'title': 'Distance(km)'},
+      {'icon': Icons.timer, 'label': 'Duration', 'color': Colors.blue.shade700,'title': 'Duration(hr:min)'},
+      {'icon': Icons.local_fire_department, 'label': 'Calories', 'color': Colors.orange.shade900,'title': 'Calories(cal)'},
+      {'icon': Icons.speed, 'label': 'Pace', 'color': Colors.green,'title': 'Pace(min/km)'},
     ];
+
+    final selectedColor = statCards.firstWhere(
+          (card) => card['label'] == _selectedActivity,
+      orElse: () => statCards[0],
+    )['color'] as Color;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
@@ -363,39 +321,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: activitiesIcons.map((activity) {
-
-              final title = activity['title'] as String;
-              final icon = activity['icon'] as IconData;
-              final isSelected = _selectedActivity == title;
-
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: statCards.map((card) {
+              final label = card['label'] as String;
+              final icon = card['icon'] as IconData;
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedActivity = title;
+                    _selectedActivity = label;
                   });
                 },
-                child: Icon(
-                  icon,
-                  size: 26,
-                  color: isSelected
-                      ? AppColors.primary
-                      : Colors.grey.shade500,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Column(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 28,
+                        color: _selectedActivity == label
+                            ? card['color'] as Color
+                            : Colors.grey.shade500,
+                      ),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
           ),
-
-          const SizedBox(height: 14),
-
+          const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.trending_up,
-                  color: AppColors.primary,
-                  size: 18),
+              Icon(Icons.trending_up, color: AppColors.primary, size: 18),
               const SizedBox(width: 6),
               Text(
                 "Activity Trend",
@@ -407,102 +364,94 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 14),
-
           SizedBox(
             height: 150,
             child: BarChart(
               BarChartData(
                 maxY: maxY,
                 borderData: FlBorderData(show: false),
-
                 gridData: FlGridData(
                   show: true,
                   horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey.withOpacity(.15),
-                      strokeWidth: 1,
-                    );
-                  },
-                ),
-
-                titlesData: FlTitlesData(
-
-                  leftTitles:
-                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-
-                  rightTitles:
-                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-
-                  topTitles:
-                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-
-                        int index = value.toInt();
-
-                        if (index >= labels.length) {
-                          return const SizedBox();
-                        }
-
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            labels[index],
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.withOpacity(.15),
+                    strokeWidth: 1,
                   ),
                 ),
-
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= labels.length) return const SizedBox();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              labels[index],
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ),
                 barGroups: List.generate(data.length, (i) {
-
                   final value = data[i];
-
                   return BarChartGroupData(
                     x: i,
                     barRods: [
-
                       BarChartRodData(
                         toY: value,
                         width: 16,
-
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(10),
                           topRight: Radius.circular(10),
                         ),
-
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                           colors: [
-                            AppColors.primary.withOpacity(.55),
-                            AppColors.primary,
+                            selectedColor.withOpacity(.55),
+                            selectedColor,
                           ],
                         ),
-
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: maxY,
                           color: Colors.grey.withOpacity(.08),
                         ),
-                      )
+                      ),
                     ],
                   );
                 }),
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                statCards.firstWhere(
+                      (card) => card['label'] == _selectedActivity,
+                  orElse: () => statCards[0],
+                )['title'] as String,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -533,63 +482,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     builder: (context, state) {
 
                       if (state is ActivitiesLoaded) {
-
-                        final filteredActivities =
-                        state.activities.where((a) {
-
-                          final name =
-                          (a.activityName ?? "").toLowerCase().trim();
-                          final selected =
-                          _selectedActivity.toLowerCase();
-
-                          if (selected == "walking") {
-                            return name == "walking" || name == "walk";
-                          }
-
-                          if (selected == "running") {
-                            return name == "running" || name == "run";
-                          }
-
-                          if (selected == "cycling") {
-                            return name == "cycling" ||
-                                name == "cycle" ||
-                                name == "bike";
-                          }
-
-                          if (selected == "goal") {
-                            return name == "walking" ||
-                                name == "walk" ||
-                                name == "running" ||
-                                name == "run" ||
-                                name == "cycling" ||
-                                name == "cycle" ||
-                                name == "bike";
-                          }
-
-                          return false;
-
+                        final selected = widget.activityType?.toLowerCase() ?? "";
+                        final filteredActivities = state.activities.where((a) {
+                          final name = (a.activityName ?? "").toLowerCase();
+                          if (selected == "walking") return name == "walking" || name == "walk";
+                          if (selected == "running") return name == "running" || name == "run";
+                          if (selected == "cycling") return name == "cycling" || name == "cycle" || name == "bike";
+                          if (selected == "hiking") return name == "hiking" || name == "unknown" || name == "Hiking".toLowerCase();
+                          return name.contains(selected);
                         }).toList();
+
+                        print("history: $_selectedActivity");
+                        print("All activities: ${state.activities.map((a) => a.activityName).toList()}");
+                        print("Selected Activity: $selected");
+                        print("Filtered Count: ${filteredActivities.length}");
 
                         final grouped = _getGrouped(filteredActivities);
 
                         final keys = grouped.keys.toList()
-                          ..sort((a, b) =>
-                              _weekDayIndex(a).compareTo(_weekDayIndex(b)));
+                          ..sort((a, b) => _weekDayIndex(a).compareTo(_weekDayIndex(b)));
 
                         return Expanded(
                           child: Column(
                             children: [
-
                               _buildToggle(),
-
                               _buildAnimatedGraph(filteredActivities),
-
                               Expanded(
                                 child: ListView.builder(
                                   itemCount: keys.length,
-
                                   itemBuilder: (context, index) {
-
                                     final key = keys[index];
                                     final activities = grouped[key]!;
 
@@ -598,45 +519,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     double totalCalories = 0;
 
                                     for (var a in activities) {
-
-                                      totalDuration +=
-                                          _parseDurationToSeconds(a.timeTaken);
-
-                                      totalDistance +=
-                                          double.tryParse(a.distance) ?? 0;
-
-                                      totalCalories +=
-                                          double.tryParse(a.caloriesBurned) ??
-                                              0;
+                                      totalDuration += _parseDurationToSeconds(a.timeTaken ?? "00:00:00");
+                                      totalDistance += double.tryParse(a.distance ?? "0") ?? 0;
+                                      totalCalories += double.tryParse(a.caloriesBurned ?? "0") ?? 0;
                                     }
 
                                     return Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-
                                         _Header(
                                           title: key,
-                                          duration:
-                                          _formatDuration(totalDuration),
+                                          duration: _formatDuration(totalDuration),
                                           distance: totalDistance,
                                           calories: totalCalories,
                                         ),
-
                                         ...activities.map(
                                               (a) => _ActivityCard(
                                             activity: a,
-                                            icon: _getActivityIcon(
-                                                a.activityName),
+                                            icon: _getActivityIcon(a.activityName ?? ""),
                                           ),
                                         ),
-
-                                        const SizedBox(height: 16)
+                                        const SizedBox(height: 16),
                                       ],
                                     );
                                   },
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         );
@@ -649,7 +557,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             );
           }
-
           return const SizedBox();
         },
       ),
@@ -722,7 +629,6 @@ class _Header extends StatelessWidget {
 }
 
 class _ActivityCard extends StatelessWidget {
-
   final ActivityData activity;
   final IconData icon;
 
@@ -732,39 +638,45 @@ class _ActivityCard extends StatelessWidget {
   });
 
   String _formatDate(String? createdAt) {
-
-    if (createdAt == null) return "";
-
+    if (createdAt == null || createdAt.isEmpty) return "";
     DateTime date = DateTime.parse(createdAt);
-
     return DateFormat('dd MMM yyyy').format(date);
   }
 
   @override
   Widget build(BuildContext context) {
 
+    final distance =
+        double.tryParse(activity.distance ?? "0")?.toStringAsFixed(2) ?? "0.00";
+
+    final duration = activity.timeTaken ?? "00:00:00";
+
+    final pace = (activity.avgPace != null && activity.avgPace!.isNotEmpty)
+        ? "${activity.avgPace} min/km"
+        : "--";
+
+    final calories = (activity.caloriesBurned != null &&
+        activity.caloriesBurned!.isNotEmpty)
+        ? "${activity.caloriesBurned} Cal"
+        : "0 Cal";
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-
       padding: const EdgeInsets.all(10),
-
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withOpacity(.35)),
       ),
-
       child: Row(
         children: [
 
           Container(
             padding: const EdgeInsets.all(10),
-
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primary.withOpacity(.15),
             ),
-
             child: Icon(icon, size: 26, color: AppColors.primary),
           ),
 
@@ -773,38 +685,41 @@ class _ActivityCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-
               children: [
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                   children: [
-
                     Text(
-                      "${double.tryParse(activity.distance)?.toStringAsFixed(2) ?? "0"} km",
+                      "$distance km",
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-
-                    Text(_formatDate(activity.createdAt),
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade700))
+                    Text(
+                      _formatDate(activity.createdAt),
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade700),
+                    )
                   ],
                 ),
 
                 const SizedBox(height: 4),
 
-                Text(activity.activityName ?? "Activity",
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(
+                  activity.activityName?.toLowerCase() == 'unknown'
+                      ? 'Hiking'
+                      : activity.activityName ?? "Activity",
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600),
+                ),
 
                 const SizedBox(height: 4),
 
                 Text(
-                    "${activity.timeTaken} • ${activity.avgPace} min/km • ${activity.caloriesBurned} Cal",
-                    style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                  "$duration • $pace • $calories",
+                  style:
+                  TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
               ],
             ),
           ),

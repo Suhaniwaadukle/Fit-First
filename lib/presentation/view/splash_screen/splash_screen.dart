@@ -25,7 +25,6 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    /// 🔁 Delay the init to ensure BlocListeners are attached
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });

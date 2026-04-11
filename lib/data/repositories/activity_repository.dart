@@ -38,8 +38,6 @@ class ActivityRepository {
       var uri = Uri.parse('$_baseUrl/insertActivity');
       var request = http.MultipartRequest('POST', uri);
       request.headers.addAll(headers);
-
-      // Add fields with explicit string conversion and formatting
       request.fields['userid'] = activityData.userId;
       request.fields['activity_id'] = activityData.activityId!;
       request.fields['activity_name'] = _getActivityName(
@@ -192,8 +190,6 @@ class ActivityRepository {
     }
   }
 
-  //! Get Partners For SubCategory
-
 Future<PartnersResponse> getPartnersForSubCategory({
   required String userId,
   required String subcategoryId,
@@ -203,21 +199,19 @@ Future<PartnersResponse> getPartnersForSubCategory({
     var request = http.MultipartRequest('POST', uri);
     request.fields['userID'] = userId;
     request.fields['subcategoryID'] = subcategoryId;
-    
-    // 🔍 Debug: Compare with working example
     print("🔍 === API REQUEST DEBUG ===");
     print("🔍 Working Example - userID: '1549', subcategoryID: '59'");
     print("🔍 Your App Sending - userID: '$userId', subcategoryID: '$subcategoryId'");
     print("🔍 Fields match working example: ${userId == '1549' && subcategoryId == '59'}");
     print("🔍 Request fields: ${request.fields}");
     print("🔍 === END DEBUG ===");
-    
+
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    
+
     log('Get Partners Response Status: ${response.statusCode}');
     log('Get Partners Response Body: ${response.body}');
-    
+
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
       return PartnersResponse.fromJson(jsonData);
@@ -229,12 +223,11 @@ Future<PartnersResponse> getPartnersForSubCategory({
   }
 }
 
-
-  //! Get Products By Partner
   Future<ProductResponse> getProductsByPartner({
     required String partnerId,
     required String subcategoryId,
-  }) async {
+  }) async
+  {
     try {
       final uri = Uri.parse('$_baseUrl/getProductByPartner');
       var request = http.MultipartRequest('POST', uri);
@@ -254,7 +247,6 @@ Future<PartnersResponse> getPartnersForSubCategory({
         }
         return ProductResponse.fromJson(jsonData);
       } else {
-        // Attempt to parse error message from body
         try {
           final errorJson = jsonDecode(response.body);
           throw Exception(
@@ -443,6 +435,68 @@ Future<PartnersResponse> getPartnersForSubCategory({
     }
   }
 
+  // Fetch Hiking Recommendation
+  Future<HikingRecommendationModel> getHikingRecommendation() async
+  {
+    final prefs = await SharedPreferences.getInstance();
+
+    print("🔍 API URL: $_baseUrl/getHikingRecommendationByBMI");
+    print("🔍 BMI Category sending: ${prefs.getString("bmiCategory")}");
+
+    final uri = Uri.parse('$_baseUrl/getHikingRecommendationByBMI');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'bmi_category': prefs.getString("bmiCategory").toString(),
+      }),
+    );
+
+    print("🔍 Status Code: ${response.statusCode}");
+    print("🔍 Response Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['status'] == 'success') {
+        return HikingRecommendationModel.fromJson(jsonResponse['data']);
+      } else {
+        throw Exception(jsonResponse['message'] ?? 'Failed to load Hiking recommendation');
+      }
+    } else {
+      throw Exception('Error: ${response.statusCode}');
+    }
+  }
+
+  Future<DailyHikingRecommendationModel> getDailyHikingRecommendation({required double actualDistance}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final uri = Uri.parse('$_baseUrl/getDailyHikingRecommendationByBMI');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': prefs.getString('userId'),
+        'bmi_category': prefs.getString('bmiCategory'),
+        'actual_Hiking_km': actualDistance,
+      }),
+    );
+
+    log('Daily Hiking Rec Status: ${response.statusCode}');
+    log('Daily Hiking Rec Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['status'] == 'success') {
+        return DailyHikingRecommendationModel.fromJson(jsonResponse);
+      } else {
+        throw Exception(jsonResponse['message'] ?? 'Failed to load Hiking recommendation');
+      }
+    } else {
+      throw Exception('Error: ${response.statusCode}');
+    }
+  }
+
   Future<DailyWalkRecommendationModel> getDailyWalkRecommendation({required double actualDistance}) async {
     final prefs = await SharedPreferences.getInstance();
     final uri = Uri.parse('$_baseUrl/getDailyWalkRecommendationByBMI');
@@ -529,7 +583,7 @@ Future<PartnersResponse> getPartnersForSubCategory({
       throw Exception('Error: ${response.statusCode}');
     }
   }
-  // Add this method to your existing ActivityRepository class
+
 Future<Map<String, dynamic>> placeOrder({
   required String userId,
   required String itemId,
@@ -545,11 +599,12 @@ Future<Map<String, dynamic>> placeOrder({
   required String partnersMobile,
   required String productDiscountPercentage,
   required String status,
-}) async {
+}) async
+{
   try {
     final uri = Uri.parse('$_baseUrl/placeOrder');
     var request = http.MultipartRequest('POST', uri);
-    
+
     // Add all the required form-data fields
     request.fields['userid'] = userId;
     request.fields['Item_id'] = itemId;
@@ -596,7 +651,9 @@ String _getActivityName(String activityType) {
       return 'running';
     case 'cycling':
       return 'cycling';
+      case 'hiking':
+      return 'hiking';
     default:
-      return 'unknown';
+      return activityType;
   }
 }

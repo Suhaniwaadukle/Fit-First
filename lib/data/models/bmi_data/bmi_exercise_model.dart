@@ -84,3 +84,33 @@ class CyclingRecommendationModel {
     );
   }
 }
+
+class HikingRecommendationModel {
+  final String id;
+  final String bmiCategory;
+  final String fitnessGoal;
+  final String distance;
+  final String duration;
+  final String calories;
+
+  HikingRecommendationModel({
+    required this.id,
+    required this.bmiCategory,
+    required this.fitnessGoal,
+    required this.distance,
+    required this.duration,
+    required this.calories,
+  });
+
+  factory HikingRecommendationModel.fromJson(Map<String, dynamic> json) {
+    return HikingRecommendationModel(
+      id: json['id'] ?? '',
+      bmiCategory: json['bmi_category'] ?? '',
+      distance: json['distance'] ?? json['recommended_distance_km'] ?? '',
+      fitnessGoal: json['fitness_goal'] ?? json['goal'] ?? '',
+      duration: json['duration'] ?? '',
+      calories: json['calories'] ?? '',
+    );
+  }
+}
+

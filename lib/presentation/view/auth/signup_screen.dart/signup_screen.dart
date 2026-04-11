@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -49,13 +47,11 @@ class _SignupScreenState extends State<SignupScreen> {
         _isGoogleLoading = true;
       });
 
-      // ✅ ADD YOUR WEB CLIENT ID HERE
       final GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
-        clientId: "14316224963-nv5ci7hhkjjkhspve9aa92buldhod05k.apps.googleusercontent.com", // ✅ Replace with your actual Web Client ID
+        clientId: "14316224963-nv5ci7hhkjjkhspve9aa92buldhod05k.apps.googleusercontent.com",
       );
 
-      // ✅ Clear any previous sign-in state
       await googleSignIn.signOut();
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
@@ -209,7 +205,7 @@ class _SignupScreenState extends State<SignupScreen> {
         child: BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthRegistrationSuccess) {
-              setState(() => _isGoogleLoading = false); // ✅ Reset Google loading
+              setState(() => _isGoogleLoading = false);
               showCustomSnackbar(context, 'Registration successful!', isError: false);
               CustomSmoothNavigator.pushReplacement(context, LoginScreen());
             } else if (state is AuthRegistrationError) {
@@ -286,8 +282,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Email TextField
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
@@ -665,7 +659,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                        : const Icon(
+                                        : const FaIcon(
                                       FontAwesomeIcons.google,
                                       color: AppColors.kBlack,
                                     ),
@@ -710,7 +704,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                        : const Icon(
+                                        : const FaIcon(
                                       FontAwesomeIcons.apple,
                                       color: AppColors.kBlack,
                                     ),

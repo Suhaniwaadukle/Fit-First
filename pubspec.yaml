@@ -1,70 +1,76 @@
-name: orka_sports
-description: "A new Flutter project."
-publish_to: "none" # Remove this line if you wish to publish to pub.dev
+  name: orka_sports
+  description: "A new Flutter project."
+  publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
-version: 1.5.4+64
+  version: 1.5.4+67
 
-environment:
-  sdk: ">=3.1.3 <4.0.0"
+  environment:
+    sdk: ">=3.1.3 <4.0.0"
 
-dependencies:
+  dependencies:
+    flutter:
+      sdk: flutter
+
+    cupertino_icons: ^1.0.8
+    country_picker: ^2.0.27
+    provider: ^6.0.5
+    numberpicker: ^2.1.2
+    equatable: ^2.0.7
+    http: ^1.4.0
+    flutter_bloc: ^9.1.1
+    bloc:
+    shared_preferences: ^2.5.3
+    cached_network_image: ^3.4.1
+    flutter_secure_storage: ^10.0.0
+    intl: ^0.20.2
+    phone_numbers_parser: ^9.0.3
+    internet_connection_checker: ^3.0.1
+    connectivity_plus: ^6.1.4
+    image_picker: ^1.1.2
+    location: ^8.0.0
+    permission_handler: ^12.0.0+1
+    google_maps_flutter: ^2.12.2
+    geocoding: ^4.0.0
+    geolocator: ^14.0.1
+    fl_chart: ^1.2.0
+    font_awesome_flutter: ^11.0.0
+    get_it: ^9.2.1
+    dio: ^5.8.0+1
+    flutter_riverpod: ^3.3.1
+    flutter_launcher_icons: ^0.14.4
+    readmore: ^3.0.0
+    share_plus: ^12.0.2
+    url_launcher: ^6.3.2
+    syncfusion_flutter_gauges: ^33.1.47
+    google_sign_in: ^6.1.0
+    firebase_core: ^4.0.0
+    dropdown_button2: ^2.3.9
+    firebase_messaging: ^16.0.0
+    awesome_notifications: ^0.11.0
+    flutter_screenutil: ^5.9.3
+    sign_in_with_apple: ^7.0.1
+    flutter_activity_recognition: ^4.0.0
+    pedometer: ^4.0.1
+    lottie: ^3.3.2
+    google_fonts: ^6.0.0
+
+
+
+  dev_dependencies:
+    flutter_test:
+      sdk: flutter
+    flutter_lints: ^6.0.0
+
+  flutter_icons:
+    android: true
+    ios: true
+    image_path: "assets/images/Fit_First.png"
+
   flutter:
-    sdk: flutter
+    uses-material-design: true
 
-  cupertino_icons: ^1.0.8
-  country_picker: ^2.0.27
-  provider: ^6.0.5
-  numberpicker: ^2.1.2
-  equatable: ^2.0.7
-  http: ^1.4.0
-  flutter_bloc: ^9.1.1
-  bloc:
-  shared_preferences: ^2.5.3
-  cached_network_image: ^3.4.1
-  flutter_secure_storage: ^9.2.4
-  intl: ^0.20.2
-  phone_numbers_parser: ^9.0.3
-  internet_connection_checker: ^3.0.1
-  connectivity_plus: ^6.1.4
-  image_picker: ^1.1.2
-  location: ^8.0.0
-  permission_handler: ^12.0.0+1
-  google_maps_flutter: ^2.12.2
-  geocoding: ^3.0.0
-  geolocator: ^14.0.1
-  fl_chart: ^0.65.0
-  font_awesome_flutter: ^10.8.0
-  get_it: ^8.0.3
-  dropdown_button2: ^2.3.9
-  dio: ^5.8.0+1
-  flutter_riverpod: ^2.6.1
-  flutter_launcher_icons: ^0.14.4
-  readmore: ^3.0.0
-  share_plus: ^11.0.0
-  url_launcher: ^6.3.2
-  syncfusion_flutter_gauges: ^30.1.37
-  google_sign_in: ^6.2.1
-  firebase_core: ^4.0.0
-  firebase_messaging: ^16.0.0
-  awesome_notifications: ^0.10.1
-  flutter_screenutil: ^5.9.3
-  sign_in_with_apple: ^6.0.0
-  
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^5.0.0
-
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/Fit_First.png"
-
-flutter:
-  uses-material-design: true
-
-  assets:
-    - assets/images/
-  #   - images/a_dot_ham.jpeg
+    assets:
+      - assets/images/
+      - assets/Lottie/
+    #   - images/a_dot_ham.jpeg
 

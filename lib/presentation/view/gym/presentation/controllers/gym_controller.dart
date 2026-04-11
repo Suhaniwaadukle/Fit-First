@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:http/http.dart' as http;
 import 'package:orka_sports/app/routes/routes_constants.dart';
 import 'package:orka_sports/app/widgets/common_dialogs/common_dialogs.dart';

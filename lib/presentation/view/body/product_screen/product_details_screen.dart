@@ -281,7 +281,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                     : Colors.grey,
                                 foregroundColor: Colors.white,
                               ),
-                              icon: const Icon(FontAwesomeIcons.whatsapp),
+                              icon: const FaIcon(FontAwesomeIcons.whatsapp),
                               label: const Text('Order by WhatsApp'),
                             ),
                           ),

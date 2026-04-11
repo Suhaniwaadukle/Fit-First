@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orka_sports/presentation/view/body_iq/domain/entities/body_iq_entity.dart';
 import 'package:orka_sports/presentation/view/body_iq/presentation/controllers/body_iq_controller.dart';
 import 'package:orka_sports/presentation/view/gym/domain/entities/gym_entity.dart';

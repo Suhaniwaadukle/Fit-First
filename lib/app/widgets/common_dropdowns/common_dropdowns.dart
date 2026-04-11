@@ -14,6 +14,7 @@ class CommonDropDownWidget extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? isDropIconColor;
   final bool? absorbing;
+
   const CommonDropDownWidget({
     super.key,
     required this.items,
@@ -38,31 +39,38 @@ class CommonDropDownWidget extends StatelessWidget {
           child: DropdownButton2<String>(
             isExpanded: true,
             customButton: Container(
-              padding: padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+              padding: padding ??
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius ?? 15),
                 color: AppColors.kWhite,
-                border: Border.all(color: AppColors.kBlack.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.kBlack.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
                   AppSize.kWidth5,
                   widgetIcon ?? const SizedBox.shrink(),
-                  widgetIcon == null ? const SizedBox.shrink() : AppSize.kWidth15,
+                  widgetIcon == null
+                      ? const SizedBox.shrink()
+                      : AppSize.kWidth15,
                   Expanded(
                     child: Text(
                       primaryValue,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontSize: 16,
-                            color:
-                                primaryValue == hintText ? AppColors.kBlack.withValues(alpha: 0.4) : AppColors.kBlack,
-                          ),
+                        fontSize: 16,
+                        color: primaryValue == hintText
+                            ? AppColors.kBlack.withValues(alpha: 0.4)
+                            : AppColors.kBlack,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Icon(
                     Icons.arrow_drop_down,
-                    color: isDropIconColor ?? AppColors.kBlack.withAlpha((0.76 * 255).round()),
+                    color: isDropIconColor ??
+                        AppColors.kBlack.withAlpha((0.76 * 255).round()),
                     size: 18,
                   ),
                 ],
@@ -70,30 +78,40 @@ class CommonDropDownWidget extends StatelessWidget {
             ),
             items: items.isEmpty
                 ? [
-                    DropdownMenuItem<String>(
-                      value: null,
-                      enabled: false,
-                      child: Center(child: Text('No data found', style: Theme.of(context).textTheme.bodyLarge)),
-                    ),
-                  ]
+              DropdownMenuItem<String>(
+                value: 'no_data',
+                enabled: false,
+                child: Center(
+                  child: Text(
+                    'No data found',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+              ),
+            ]
                 : items
-                    .map(
-                      (String item) => DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(
-                          item,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
+                .map(
+                  (String item) => DropdownMenuItem<String>(
+                value: item,
+                child: Text(
+                  item,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+                .toList(),
             value: items.contains(primaryValue) ? primaryValue : null,
             onChanged: onDropDwChanged,
-            buttonStyleData: const ButtonStyleData(overlayColor: WidgetStatePropertyAll(AppColors.kWhite)),
+            buttonStyleData: ButtonStyleData(
+              overlayColor: WidgetStatePropertyAll(AppColors.kWhite),
+            ),
             dropdownStyleData: DropdownStyleData(
               maxHeight: 200,
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: AppColors.kWhite),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: AppColors.kWhite,
+              ),
               offset: const Offset(0, -10),
               scrollbarTheme: ScrollbarThemeData(
                 radius: const Radius.circular(40),
@@ -101,9 +119,9 @@ class CommonDropDownWidget extends StatelessWidget {
                 thumbVisibility: WidgetStateProperty.all<bool>(true),
               ),
             ),
-            menuItemStyleData: const MenuItemStyleData(
+            menuItemStyleData: MenuItemStyleData(
               height: 40,
-              padding: EdgeInsets.only(left: 14, right: 14),
+              padding: const EdgeInsets.only(left: 14, right: 14),
               overlayColor: WidgetStatePropertyAll(AppColors.kWhite),
             ),
           ),

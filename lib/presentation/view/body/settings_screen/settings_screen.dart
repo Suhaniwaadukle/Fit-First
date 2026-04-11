@@ -29,6 +29,7 @@ import 'package:orka_sports/core/services/weather_service.dart';
 import 'package:orka_sports/data/repositories/bmi_repository.dart';
 import 'package:orka_sports/presentation/view/body/settings_screen/user_profile/bmi_calculate/bmi_calculate.dart';
 
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -2351,7 +2352,21 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
                                 AppSize.kHeight10,
 
                                 _buildTimeSortedScheduleSection(),
-                                
+
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.monitor_weight_outlined,
+                                      color: AppColors.primary,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text('BMI', style: AppTextStyles.title),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                const BmiProfileCard(),
                                 const SizedBox(height: 20),
                                 const Text(
                                   'Preferences',
@@ -2499,6 +2514,8 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
             );
           },
         ),
+
+
       ),
     ),
     );
@@ -2631,6 +2648,7 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
       );
     }
 
+
     final sortedItems = _createSortedScheduleItems();
 
     if (sortedItems.isEmpty) {
@@ -2750,6 +2768,10 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
         ],
       ),
     );
+
+
+
+
   }
 
   Widget _buildScheduleItem(Map<String, dynamic> item) {
@@ -3360,6 +3382,335 @@ if (isWaterReminderEnabled && waterReminderStartTime != null && waterReminderEnd
           ],
         );
       },
+    );
+  }
+
+}
+
+
+class BmiProfileCard extends StatefulWidget {
+  const BmiProfileCard({super.key});
+
+  @override
+  State<BmiProfileCard> createState() => _BmiProfileCardState();
+}
+
+class _BmiProfileCardState extends State<BmiProfileCard> {
+  double? _bmi;
+  String _category = '';
+  String _lifestyle = '';
+  double _height = 0;
+  int _weight = 0;
+  int _age = 0;
+  bool _hasData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBmiData();
+  }
+
+  Future<void> _loadBmiData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final height = prefs.getDouble('lastHeight');
+    final weight = prefs.getInt('lastWeight');
+    final age    = prefs.getInt('lastAge') ?? 0;
+    final lifestyle = prefs.getString('lastLifestyle') ?? '';
+    final category  = prefs.getString('bmiCategory') ?? '';
+
+    if (height != null && weight != null && height > 0) {
+      final h = height / 100;
+      final bmi = weight / (h * h);
+      setState(() {
+        _bmi = bmi;
+        _height = height;
+        _weight = weight;
+        _age = age;
+        _lifestyle = lifestyle;
+        _category = category.isNotEmpty ? category : _localCategory(bmi);
+        _hasData = true;
+      });
+    }
+  }
+
+  String _localCategory(double bmi) {
+    if (bmi < 18.5) return 'Underweight';
+    if (bmi < 25)   return 'Normal';
+    if (bmi < 30)   return 'Overweight';
+    return 'Obese';
+  }
+
+  Color _categoryColor(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'underweight': return const Color(0xFF378ADD);
+      case 'normal':      return const Color(0xFF4CAF50);
+      case 'overweight':  return const Color(0xFFEF9F27);
+      default:            return const Color(0xFFE24B4A);
+    }
+  }
+
+  Color _categoryBg(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'underweight': return const Color(0xFFE6F1FB);
+      case 'normal':      return const Color(0xFFEAF3DE);
+      case 'overweight':  return const Color(0xFFFAEEDA);
+      default:            return const Color(0xFFFCEBEB);
+    }
+  }
+
+  double _dotPosition(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'underweight': return 0.10;
+      case 'normal':      return 0.33;
+      case 'overweight':  return 0.62;
+      default:            return 0.85;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasData) {
+      return _buildEmptyCard();
+    }
+
+    final color = _categoryColor(_category);
+    final bgColor = _categoryBg(_category);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Body Mass Index',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Text(
+                      _lifestyle.isNotEmpty ? _lifestyle : 'Normal',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BmiCalculate()),
+                  );
+                  _loadBmiData(); // Refresh after returning
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Recalculate',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // BMI Value
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _bmi!.toStringAsFixed(1),
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  'kg/m²',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Category badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _category,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Color bar
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Row(
+                  children: [
+                    Expanded(child: Container(height: 8, color: const Color(0xFF378ADD).withOpacity(0.7))),
+                    Expanded(child: Container(height: 8, color: const Color(0xFF4CAF50).withOpacity(0.7))),
+                    Expanded(child: Container(height: 8, color: const Color(0xFFEF9F27).withOpacity(0.8))),
+                    Expanded(child: Container(height: 8, color: const Color(0xFFE24B4A).withOpacity(0.7))),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: _dotPosition(_category) * (MediaQuery.of(context).size.width - 64) - 6,
+                top: -2,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: ['Underweight', 'Normal', 'Overweight', 'Obese']
+                .map((e) => Text(e, style: TextStyle(fontSize: 10, color: Colors.grey.shade400)))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+
+          // Stats row
+          Row(
+            children: [
+              Expanded(child: _statBox('${_height.toStringAsFixed(0)} cm', 'Height')),
+              const SizedBox(width: 8),
+              Expanded(child: _statBox('$_weight kg', 'Weight')),
+              const SizedBox(width: 8),
+              Expanded(child: _statBox('$_age yrs', 'Age')),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // WHO Footer
+          Divider(color: Colors.grey.shade100, height: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6F1FB),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(Icons.info_outline, size: 12, color: Color(0xFF378ADD)),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Source: World Health Organization (WHO)',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBox(String val, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.monitor_weight_outlined, color: Colors.grey.shade400),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No BMI data yet. Tap Calculate to get started.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
+          ),
+          GestureDetector(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BmiCalculate()),
+              );
+              _loadBmiData();
+            },
+            child: Text(
+              'Calculate',
+              style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

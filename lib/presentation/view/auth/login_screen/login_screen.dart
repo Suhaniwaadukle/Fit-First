@@ -311,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: AppColors.kPrimaryColor,
                               ),
                             ),
-                            icon: const Icon(FontAwesomeIcons.google, color: AppColors.kBlack),
+                            icon: const FaIcon(FontAwesomeIcons.google, color: AppColors.kBlack),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.kWhite,
                               minimumSize: const Size(double.infinity, 55),

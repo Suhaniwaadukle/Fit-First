@@ -132,3 +132,48 @@ class DailyCyclingRecommendationModel {
     );
   }
 }
+
+class DailyHikingRecommendationModel {
+  final String bmiCategory;
+  final String goal;
+  final String recommendedDistanceKm;
+  final String frequency;
+  final String notes;
+  final int recommendedKm;
+  final double actualKmToday;
+  final bool popupRequired;
+  final int coinsAwardedToday;
+  final int weeklyReward;
+  final int monthlyReward;
+
+  DailyHikingRecommendationModel({
+    required this.bmiCategory,
+    required this.goal,
+    required this.recommendedDistanceKm,
+    required this.frequency,
+    required this.notes,
+    required this.recommendedKm,
+    required this.actualKmToday,
+    required this.popupRequired,
+    required this.coinsAwardedToday,
+    required this.weeklyReward,
+    required this.monthlyReward,
+  });
+
+  factory DailyHikingRecommendationModel.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return DailyHikingRecommendationModel(
+      bmiCategory: data['bmi_category'] ?? '',
+      goal: data['goal'] ?? '',
+      recommendedDistanceKm: data['recommended_distance_km'] ?? '',
+      frequency: data['frequency'] ?? '',
+      notes: data['notes'] ?? '',
+      recommendedKm: json['recommended_km'] ?? 0,
+      actualKmToday: (json['actual_km_today'] as num?)?.toDouble() ?? 0.0,
+      popupRequired: json['popup_required'] ?? false,
+      coinsAwardedToday: json['coins_awarded_today'] ?? 0,
+      weeklyReward: json['weekly_reward'] ?? 0,
+      monthlyReward: json['monthly_reward'] ?? 0,
+    );
+  }
+}

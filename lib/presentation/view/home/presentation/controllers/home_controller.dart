@@ -3,6 +3,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:orka_sports/config/service_locator.dart';
 import 'package:orka_sports/presentation/view/home/data/repositories/home_repo_impl.dart';
 import 'package:orka_sports/presentation/view/home/domain/entities/home_entity.dart';
