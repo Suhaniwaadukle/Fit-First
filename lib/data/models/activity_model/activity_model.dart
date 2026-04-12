@@ -89,7 +89,7 @@ class ActivityData {
         "time_taken": timeTaken,
         "avg_pace": avgPace,
         "distance": distance,
-        "over_speeding": overSpeeding,
+        "over_speeding": overSpeeding == "true" ? 1 : 0,
         "calories_burned": caloriesBurned,
         "elevation_gain": elevationGain,
         // "created_at" is not sent, it's auto-generated

@@ -608,7 +608,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       _lastValidPosition = filteredLatLng;
       _updateUserMarker(filteredLatLng);
 
-      // ✅ UPDATED setState — distance + calories + pace SATH MEIN update hote hain
       setState(() {
         // Distance
         _liveGpsDistanceKm += segmentDistance / 1000.0;
@@ -631,8 +630,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
         _destinationLat = filteredLat.toString();
         _destinationLng = filteredLng.toString();
 
-        // ✅ FIX: Calories aur pace yahan update karo — GPS movement ke sath sync mein
-        // activeSeconds = sirf woh time jab user actually chal raha tha (pause time minus)
         final int activeSeconds = _durationSeconds - _totalPausedSeconds;
         _avgPace = _liveGpsDistanceKm > 0
             ? _formatPace(_liveGpsDistanceKm, activeSeconds)
@@ -711,7 +708,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
           _pauseStartTime = null;
         }
         _isPaused = false;
-        // ✅ Reset stationary count on resume
         _stationaryCount = 0;
         setState(() {});
         log("Session Resumed | Total paused so far: $_totalPausedSeconds sec");
@@ -867,6 +863,8 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
       context.read<ActivityBloc>().add(AddActivity(activityToSave));
       await _handleRewardLogic(finalActualDistance: finalDistanceKm);
     }
+    print("💾 Saving timeTaken: '$formattedDuration'");
+    print("💾 activeDurationSeconds: $activeDurationSeconds");
   }
 
   Future<void> _handleRewardLogic({required double finalActualDistance}) async {
@@ -1376,7 +1374,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
     final valueFontSize = isLarge ? (sw * 0.065).clamp(18.0, 28.0) : (sw * 0.048).clamp(13.0, 20.0);
     final iconSize = isLarge ? (sw * 0.06).clamp(18.0, 26.0) : (sw * 0.043).clamp(13.0, 18.0);
     final labelFontSize = isLarge ? (sw * 0.032).clamp(10.0, 14.0) : (sw * 0.028).clamp(9.0, 13.0);
-
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,

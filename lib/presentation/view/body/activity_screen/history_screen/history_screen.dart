@@ -10,6 +10,8 @@ import 'package:orka_sports/presentation/blocs/activity/activity_bloc.dart';
 import 'package:orka_sports/presentation/blocs/activity_list/activity_list_bloc.dart';
 import 'package:orka_sports/presentation/blocs/activity_list/activity_list_event.dart';
 import 'package:orka_sports/presentation/blocs/activity_list/activity_list_state.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'TaskScreen.dart';
 
 enum HistoryType { weekly, monthly }
 
@@ -55,6 +57,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context.read<ActivityBloc>().add(FetchActivities(userId));
     }
   }
+
 
   IconData _getActivityIcon(String? name) {
     switch (name?.toLowerCase()) {
@@ -523,8 +526,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                         final grouped = _getGrouped(filteredActivities);
 
+                        final todayName = DateFormat('EEEE').format(DateTime.now());
+                        final todayIndex = _weekDayIndex(todayName);
+
                         final keys = grouped.keys.toList()
-                          ..sort((a, b) => _weekDayIndex(a).compareTo(_weekDayIndex(b)));
+                          ..sort((a, b) {
+                            int distA = (todayIndex - _weekDayIndex(a) + 7) % 7;
+                            int distB = (todayIndex - _weekDayIndex(b) + 7) % 7;
+                            return distA.compareTo(distB);
+                          });
 
                         return Expanded(
                           child: Column(
@@ -664,21 +674,16 @@ class _ActivityCard extends StatelessWidget {
   String _formatDate(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return "";
     try {
-      DateTime date = DateTime.parse(createdAt);
-      return DateFormat('dd MMM yyyy').format(date);
+      DateTime date = DateTime.parse(createdAt).toLocal();
+      return DateFormat('dd MMM yyyy • hh:mm a').format(date);
     } catch (_) {
       return "";
     }
   }
 
-  // ✅ Duration format validate karo
   String _formatDuration(String raw) {
     if (raw.isEmpty || raw == "null" || raw == "0") return "00:00:00";
-
-    // Agar already HH:MM:SS format mein hai
     if (RegExp(r'^\d{2}:\d{2}:\d{2}$').hasMatch(raw)) return raw;
-
-    // Agar sirf seconds mein aa raha hai (e.g. "3600")
     final seconds = int.tryParse(raw);
     if (seconds != null) {
       final h = (seconds ~/ 3600).toString().padLeft(2, '0');
@@ -686,89 +691,131 @@ class _ActivityCard extends StatelessWidget {
       final s = (seconds % 60).toString().padLeft(2, '0');
       return "$h:$m:$s";
     }
-
-    return raw; // as-is return karo
+    return raw;
   }
 
   @override
   Widget build(BuildContext context) {
+    print("⏱️ timeTaken raw value: '${activity.timeTaken}'");
     final distance =
         double.tryParse(activity.distance)?.toStringAsFixed(2) ?? "0.00";
-
-    final duration = _formatDuration(activity.timeTaken); // ✅ validated
-
+    final duration = _formatDuration(
+      activity.timeTaken.isEmpty || activity.timeTaken == "null"
+          ? "00:00:00"
+          : activity.timeTaken,
+    );
     final pace = activity.avgPace.isNotEmpty && activity.avgPace != "null"
         ? "${activity.avgPace} min/km"
         : "--";
-
     final calories = activity.caloriesBurned.isNotEmpty &&
         activity.caloriesBurned != "null"
         ? "${activity.caloriesBurned} Cal"
         : "0 Cal";
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(.35)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(.15),
-            ),
-            child: Icon(icon, size: 26, color: AppColors.primary),
-          ),
+    return GestureDetector(
+      onTap: () {
+        IconData resolvedIcon;
+        switch ((activity.activityName ?? '').toLowerCase()) {
+          case 'running': resolvedIcon = Icons.directions_run_rounded; break;
+          case 'walking': resolvedIcon = Icons.directions_walk_rounded; break;
+          case 'cycling': resolvedIcon = Icons.directions_bike_rounded; break;
+          case 'hiking':  resolvedIcon = Icons.terrain_rounded; break;
+          default:        resolvedIcon = Icons.directions_run_rounded;
+        }
 
-          const SizedBox(width: 10),
+        final double? srcLat = double.tryParse(activity.sourceLat);
+        final double? srcLng = double.tryParse(activity.sourceLng);
+        final startLatLng = (srcLat != null && srcLng != null)
+            ? LatLng(srcLat, srcLng)
+            : null;
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "$distance km",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    Text(
-                      _formatDate(activity.createdAt),
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade700),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  activity.activityName?.toLowerCase() == 'unknown'
-                      ? 'Hiking'
-                      : activity.activityName ?? "Activity",
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  "$duration • $pace • $calories",
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                ),
-              ],
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskScreen(
+              activityType: activity.activityName?.toLowerCase() == 'unknown'
+                  ? 'Hiking'
+                  : activity.activityName ?? 'Running',
+              activityIcon: resolvedIcon,
+              distanceCovered: double.tryParse(activity.distance ?? '0') ?? 0.0,
+              durationFormatted: activity.timeTaken ?? '00:00:00',
+              caloriesBurned: activity.caloriesBurned ?? '0',
+              avgPace: activity.avgPace ?? '0.00',
+              elevationGain: activity.elevationGain ?? '0.0',
+              overSpeedingCount: 0,       // ActivityData mein nahi hai
+              routeCoordinates: const [], // saved nahi hai
+              markers: const {},          // saved nahi hai
+              polylines: const {},        // saved nahi hai
+              startLatLng: startLatLng,
             ),
           ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(.35)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(.15),
+              ),
+              child: Icon(icon, size: 26, color: AppColors.primary),
+            ),
 
-          const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "$distance km",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        _formatDate(activity.createdAt),
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    activity.activityName?.toLowerCase() == 'unknown'
+                        ? 'Hiking'
+                        : activity.activityName ?? "Activity",
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    "$duration • $pace • $calories",
+                    style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                  ),
+                ],
+              ),
+            ),
+
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }

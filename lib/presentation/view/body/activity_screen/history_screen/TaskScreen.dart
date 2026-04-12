@@ -529,8 +529,6 @@ Tracked with Orka Sports – Fit First
     );
   }
 
-  // ─── Stats Grid ──────────────────────────────────────────────────────────────
-
   Widget _buildStatsGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -648,8 +646,6 @@ Tracked with Orka Sports – Fit First
   Widget _dividerH() =>
       Container(height: 0.5, color: Colors.white12);
 
-  // ─── Branding Strip ──────────────────────────────────────────────────────────
-
   Widget _buildBrandingStrip() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -708,7 +704,6 @@ Tracked with Orka Sports – Fit First
       ),
     );
   }
-
 
   Widget _buildShareStrip() {
     return Padding(
