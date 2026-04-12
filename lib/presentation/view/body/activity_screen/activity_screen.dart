@@ -146,7 +146,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             }
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -165,48 +165,57 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Your Fitness Dashboard',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                    child: Builder(
+                      builder: (context) {
+                        final sw = MediaQuery.of(context).size.width;
+                        final titleSize = (sw * 0.052).clamp(14.0, 22.0);
+                        final bodySize = (sw * 0.036).clamp(11.0, 16.0);
+                        final lottieHeight = (sw * 0.22).clamp(60.0, 100.0);
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Your Fitness Dashboard',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: titleSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: sw * 0.025),
+                                  Text(
+                                    '• Monitor your daily workouts\n'
+                                        '• Track your steps and distance\n'
+                                        '• Monitor calories burned\n'
+                                        '• Stay on top of your fitness goals',
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: bodySize,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: 10),
-                              Text(
-                                '• Monitor your daily workouts\n'
-                                    '• Track your steps and distance\n'
-                                    '• Monitor calories burned\n'
-                                    '• Stay on top of your fitness goals',
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 16,
-                                  height: 1.5,
-                                ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Lottie.asset(
+                                'assets/Lottie/card.json',
+                                height: lottieHeight,
+                                fit: BoxFit.contain,
                               ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Lottie.asset(
-                            'assets/Lottie/card.json',
-                            height: 100,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
@@ -219,14 +228,25 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     ),
                   ),
                   const SizedBox(height: 15),
-
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossAxisCount = 4;
-                      final spacing = 14.0;
+                      final crossAxisCount = constraints.maxWidth < 360
+                          ? 2
+                          : constraints.maxWidth < 600
+                          ? 3
+                          : 4;
+
+                      final spacing = constraints.maxWidth < 360 ? 8.0 : 12.0;
                       final totalSpacing = spacing * (crossAxisCount - 1);
                       final cardWidth = (constraints.maxWidth - totalSpacing) / crossAxisCount;
-                      final cardHeight = cardWidth * 1.2;
+                      final cardHeight = cardWidth * 0.8;
+
+                      final avatarRadius = (cardWidth * 0.22).clamp(18.0, 32.0);
+                      final iconSize = (cardWidth * 0.22).clamp(14.0, 28.0);
+                      final fontSize = (cardWidth * 0.13).clamp(10.0, 16.0);
+                      final innerPadding = (cardWidth * 0.06).clamp(4.0, 8.0);
+                      final gapHeight = (cardWidth * 0.08).clamp(4.0, 12.0);
+                      final strokeWidth = (cardWidth * 0.04).clamp(2.0, 3.0);
 
                       return GridView.builder(
                         shrinkWrap: true,
@@ -253,7 +273,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               getActivity: getActivity,
                             ),
                             child: Container(
-                              padding: const EdgeInsets.all(5),
+                              padding: EdgeInsets.all(innerPadding),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [color.withOpacity(0.9), color],
@@ -271,28 +291,39 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   CircleAvatar(
-                                    radius: 26,
+                                    radius: avatarRadius,
                                     backgroundColor: Colors.white,
                                     child: isLoading
-                                        ? const CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                                        ? CircularProgressIndicator(
+                                      strokeWidth: strokeWidth,
+                                      valueColor: const AlwaysStoppedAnimation(
+                                          AppColors.primary),
                                     )
                                         : (activity['icon'] is IconData
-                                        ? Icon(activity['icon'] as IconData, size: 28, color: AppColors.primary)
-                                        : FaIcon(activity['icon'] as FaIconData, size: 28, color: AppColors.primary)),
+                                        ? Icon(
+                                      activity['icon'] as IconData,
+                                      size: iconSize,
+                                      color: AppColors.primary,
+                                    )
+                                        : FaIcon(
+                                      activity['icon'] as FaIconData,
+                                      size: iconSize,
+                                      color: AppColors.primary,
+                                    )),
                                   ),
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: gapHeight),
                                   Flexible(
                                     child: Text(
                                       title,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        fontSize: fontSize,
+                                        height: 1.2,
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -385,7 +416,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           activityIcon: icon,
           activityId: activityId,
           yourGoal: prefs.getString("goal").toString().isEmpty
-              ? "YOUR GOAL"
+              ? "Start your, Fitness Journey"
               : prefs.getString("goal").toString(),
           distanceGoal: double.parse(distanceKm ?? '0'),
           activityRepo: _activityRepository,

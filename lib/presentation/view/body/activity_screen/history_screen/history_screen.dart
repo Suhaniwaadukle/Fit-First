@@ -194,7 +194,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildAnimatedGraph(List<ActivityData> activities) {
-
     List<double> _getGraphDataByActivity() {
       if (selectedType == HistoryType.weekly) {
         final weekLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -302,159 +301,184 @@ class _HistoryScreenState extends State<HistoryScreen> {
       orElse: () => statCards[0],
     )['color'] as Color;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          )
-        ],
-        border: Border.all(
-          color: AppColors.primary.withOpacity(.50),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: statCards.map((card) {
-              final label = card['label'] as String;
-              final icon = card['icon'] as IconData;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedActivity = label;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Column(
-                    children: [
-                      Icon(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sw = MediaQuery.of(context).size.width;
+        final isSmall = sw < 360;
+
+        final containerMargin = isSmall
+            ? const EdgeInsets.fromLTRB(8, 0, 8, 8)
+            : const EdgeInsets.fromLTRB(12, 0, 12, 10);
+        final containerPadding = isSmall ? 8.0 : 10.0;
+        final iconSize = isSmall ? 22.0 : 28.0;
+        final iconHPad = isSmall ? 4.0 : 6.0;
+        final chartHeight = isSmall ? 120.0 : 150.0;
+        final barWidth = isSmall ? 10.0 : 16.0;
+        final bottomLabelSize = isSmall ? 9.0 : 11.0;
+        final titleFontSize = isSmall ? 13.0 : 16.0;
+        final trendFontSize = isSmall ? 12.0 : 14.0;
+        final trendIconSize = isSmall ? 15.0 : 18.0;
+        final spacing1 = isSmall ? 10.0 : 16.0;
+        final spacing2 = isSmall ? 10.0 : 14.0;
+        final spacing3 = isSmall ? 6.0 : 10.0;
+
+        return Container(
+          margin: containerMargin,
+          padding: EdgeInsets.all(containerPadding),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(.05),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              )
+            ],
+            border: Border.all(
+              color: AppColors.primary.withOpacity(.50),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: statCards.map((card) {
+                  final label = card['label'] as String;
+                  final icon = card['icon'] as IconData;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedActivity = label;
+                      });
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: iconHPad),
+                      child: Icon(
                         icon,
-                        size: 28,
+                        size: iconSize,
                         color: _selectedActivity == label
                             ? card['color'] as Color
                             : Colors.grey.shade500,
                       ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: AppColors.primary, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                "Activity Trend",
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                  fontSize: 14,
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 150,
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(
-                  show: true,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.withOpacity(.15),
-                    strokeWidth: 1,
+
+              SizedBox(height: spacing1),
+
+              Row(
+                children: [
+                  Icon(Icons.trending_up, color: AppColors.primary, size: trendIconSize),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Activity Trend",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                      fontSize: trendFontSize,
+                    ),
                   ),
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
-                          if (index < 0 || index >= labels.length) return const SizedBox();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              labels[index],
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                          );
-                        },
+                ],
+              ),
+
+              SizedBox(height: spacing2),
+
+              SizedBox(
+                height: chartHeight,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxY,
+                    borderData: FlBorderData(show: false),
+                    gridData: FlGridData(
+                      show: true,
+                      horizontalInterval: maxY / 4,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: Colors.grey.withOpacity(.15),
+                        strokeWidth: 1,
                       ),
                     ),
-                ),
-                barGroups: List.generate(data.length, (i) {
-                  final value = data[i];
-                  return BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: value,
-                        width: 16,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(10),
-                          topRight: Radius.circular(10),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            selectedColor.withOpacity(.55),
-                            selectedColor,
-                          ],
-                        ),
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: maxY,
-                          color: Colors.grey.withOpacity(.08),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index < 0 || index >= labels.length) return const SizedBox();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                labels[index],
+                                style: TextStyle(
+                                  fontSize: bottomLabelSize,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  );
-                }),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                statCards.firstWhere(
-                      (card) => card['label'] == _selectedActivity,
-                  orElse: () => statCards[0],
-                )['title'] as String,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                    ),
+                    barGroups: List.generate(data.length, (i) {
+                      final value = data[i];
+                      return BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: value,
+                            width: barWidth,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(10),
+                              topRight: Radius.circular(10),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                selectedColor.withOpacity(.55),
+                                selectedColor,
+                              ],
+                            ),
+                            backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: maxY,
+                              color: Colors.grey.withOpacity(.08),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
                 ),
+              ),
+
+              SizedBox(height: spacing3),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    statCards.firstWhere(
+                          (card) => card['label'] == _selectedActivity,
+                      orElse: () => statCards[0],
+                    )['title'] as String,
+                    style: TextStyle(
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -639,24 +663,46 @@ class _ActivityCard extends StatelessWidget {
 
   String _formatDate(String? createdAt) {
     if (createdAt == null || createdAt.isEmpty) return "";
-    DateTime date = DateTime.parse(createdAt);
-    return DateFormat('dd MMM yyyy').format(date);
+    try {
+      DateTime date = DateTime.parse(createdAt);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (_) {
+      return "";
+    }
+  }
+
+  // ✅ Duration format validate karo
+  String _formatDuration(String raw) {
+    if (raw.isEmpty || raw == "null" || raw == "0") return "00:00:00";
+
+    // Agar already HH:MM:SS format mein hai
+    if (RegExp(r'^\d{2}:\d{2}:\d{2}$').hasMatch(raw)) return raw;
+
+    // Agar sirf seconds mein aa raha hai (e.g. "3600")
+    final seconds = int.tryParse(raw);
+    if (seconds != null) {
+      final h = (seconds ~/ 3600).toString().padLeft(2, '0');
+      final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+      final s = (seconds % 60).toString().padLeft(2, '0');
+      return "$h:$m:$s";
+    }
+
+    return raw; // as-is return karo
   }
 
   @override
   Widget build(BuildContext context) {
-
     final distance =
-        double.tryParse(activity.distance ?? "0")?.toStringAsFixed(2) ?? "0.00";
+        double.tryParse(activity.distance)?.toStringAsFixed(2) ?? "0.00";
 
-    final duration = activity.timeTaken ?? "00:00:00";
+    final duration = _formatDuration(activity.timeTaken); // ✅ validated
 
-    final pace = (activity.avgPace != null && activity.avgPace!.isNotEmpty)
+    final pace = activity.avgPace.isNotEmpty && activity.avgPace != "null"
         ? "${activity.avgPace} min/km"
         : "--";
 
-    final calories = (activity.caloriesBurned != null &&
-        activity.caloriesBurned!.isNotEmpty)
+    final calories = activity.caloriesBurned.isNotEmpty &&
+        activity.caloriesBurned != "null"
         ? "${activity.caloriesBurned} Cal"
         : "0 Cal";
 
@@ -670,7 +716,6 @@ class _ActivityCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -686,7 +731,6 @@ class _ActivityCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -699,7 +743,7 @@ class _ActivityCard extends StatelessWidget {
                       _formatDate(activity.createdAt),
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade700),
-                    )
+                    ),
                   ],
                 ),
 
@@ -717,14 +761,13 @@ class _ActivityCard extends StatelessWidget {
 
                 Text(
                   "$duration • $pace • $calories",
-                  style:
-                  TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
               ],
             ),
           ),
 
-          const Icon(Icons.chevron_right, color: Colors.grey)
+          const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
     );
