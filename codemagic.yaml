@@ -4,12 +4,20 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+      groups:
+        - app_store
     scripts:
       - name: Install dependencies
         script: |
           flutter pub get
       - name: Build iOS
         script: |
-          flutter build ios --release --no-codesign
+          flutter build ipa --release
     artifacts:
-      - build/ios/iphoneos/*.app
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
