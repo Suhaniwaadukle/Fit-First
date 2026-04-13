@@ -5,7 +5,7 @@ workflows:
       flutter: stable
       xcode: latest
       groups:
-        - app_store
+        - Fit First
     scripts:
       - name: Install dependencies
         script: |
