@@ -625,7 +625,6 @@ class _ActivitySessionScreenState extends State<ActivitySessionScreen> {
           _lastElevation = currentElevation;
         }
 
-        // Route
         _routeCoordinates.add(filteredLatLng);
         _destinationLat = filteredLat.toString();
         _destinationLng = filteredLng.toString();

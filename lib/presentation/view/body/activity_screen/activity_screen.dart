@@ -418,7 +418,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
           yourGoal: prefs.getString("goal").toString().isEmpty
               ? "Start your, Fitness Journey"
               : prefs.getString("goal").toString(),
-          distanceGoal: double.parse(distanceKm ?? '0'),
+          // distanceGoal: double.parse(distanceKm ?? '0'),
+          distanceGoal: 0.001,
           activityRepo: _activityRepository,
         ),
       );

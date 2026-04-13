@@ -1,4 +1,3 @@
-
 import 'dart:developer';
 
 class GetActivityResponse {
@@ -25,7 +24,7 @@ class GetActivityResponse {
 }
 
 class ActivityData {
-  final String? id; // Nullable for insertion, non-null when fetched
+  final String? id;
   final String? activityId;
   final String? activityName; 
   final String sourceLat;
@@ -33,13 +32,13 @@ class ActivityData {
   final String sourceLng;
   final String destinationLat;
   final String destinationLng;
-  final String timeTaken; // "HH:MM:SS"
+  final String timeTaken;
   final String avgPace;
-  final String distance; // in km
+  final String distance;
   final String overSpeeding;
   final String caloriesBurned;
   final String elevationGain;
-  final String? createdAt; // Nullable for insertion
+  final String? createdAt;
 
   ActivityData({
     this.id,
@@ -78,9 +77,7 @@ class ActivityData {
       );
 
   Map<String, dynamic> toJson() => {
-        // 'id' is not sent for insertion, it's auto-generated
         "activity_id": activityId,
-        // "activity_name": activityName, // The API might derive this from activity_id
         "source_lat": sourceLat,
         "userid": userId,
         "source_lng": sourceLng,
@@ -92,11 +89,9 @@ class ActivityData {
         "over_speeding": overSpeeding == "true" ? 1 : 0,
         "calories_burned": caloriesBurned,
         "elevation_gain": elevationGain,
-        // "created_at" is not sent, it's auto-generated
       };
 }
 
-// For InsertActivity API Response
 class InsertActivityResponse {
   final String status;
   final int? insertLastId;
