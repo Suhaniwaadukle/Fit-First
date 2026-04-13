@@ -6,7 +6,7 @@ workflows:
       xcode: latest
       groups:
         - Fit First
-     ios_signing:
+      ios_signing:
         distribution_type: app_store
         bundle_identifier: com.fitfirst.appstore
     scripts:
