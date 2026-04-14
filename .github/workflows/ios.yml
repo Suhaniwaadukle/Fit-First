@@ -15,7 +15,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'   # 3.32.0 abhi stable nahi hai, ye use karo
+          flutter-version: '3.29.0'   # 3.32.0 abhi stable nahi hai, ye use karo
           channel: 'stable'
           cache: true                  # speed ke liye
 
