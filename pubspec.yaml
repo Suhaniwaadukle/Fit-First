@@ -41,10 +41,10 @@ dependencies:
   share_plus: ^7.2.1
   url_launcher: ^6.2.5
   syncfusion_flutter_gauges: ^24.2.9
-  google_sign_in: ^6.2.1
-  firebase_core: ^2.27.0
-  dropdown_button2: ^2.3.9
+  google_sign_in: ^6.0.2
+  firebase_core: ^2.25.4
   firebase_messaging: ^14.7.10
+  dropdown_button2: ^2.3.9
   awesome_notifications: ^0.9.3
   flutter_screenutil: ^5.9.0
   sign_in_with_apple: ^5.0.0
