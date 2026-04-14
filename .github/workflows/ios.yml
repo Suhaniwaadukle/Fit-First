@@ -15,8 +15,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.24.5'   # 3.32.0 abhi stable nahi hai, ye use karo
           channel: 'stable'
+          cache: true                  # speed ke liye
 
       - name: Install dependencies
         run: flutter pub get
@@ -24,14 +25,21 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
-          pod install
+          pod install --repo-update    # --repo-update important hai
           cd ..
 
-      - name: Build IPA
-        run: flutter build ipa --release
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign   # IPA ke liye signing chahiye
+
+      - name: Archive Runner.app
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r app.ipa Payload/
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: fit-first-ipa
-          path: build/ios/ipa/*.ipa
+          path: build/ios/iphoneos/app.ipa
