@@ -1,76 +1,72 @@
-  name: orka_sports
-  description: "A new Flutter project."
-  publish_to: "none" # Remove this line if you wish to publish to pub.dev
+name: orka_sports
+description: "A new Flutter project."
+publish_to: "none"
+version: 1.5.4+69
 
-  version: 1.5.4+69
+environment:
+  sdk: ">=3.7.0 <4.0.0"    # Dart 3.7+ required for riverpod
 
-  environment:
-    sdk: ">=3.4.1 <4.0.0"
-
-  dependencies:
-    flutter:
-      sdk: flutter
-
-    cupertino_icons: ^1.0.8
-    country_picker: ^2.0.27
-    provider: ^6.0.5
-    numberpicker: ^2.1.2
-    equatable: ^2.0.7
-    http: ^1.4.0
-    flutter_bloc: ^9.1.1
-    bloc:
-    shared_preferences: ^2.5.3
-    cached_network_image: ^3.4.1
-    flutter_secure_storage: ^10.0.0
-    intl: ^0.20.2
-    phone_numbers_parser: ^9.0.3
-    internet_connection_checker: ^3.0.1
-    connectivity_plus: ^6.1.4
-    image_picker: ^1.1.2
-    location: ^8.0.0
-    permission_handler: ^12.0.0+1
-    google_maps_flutter: ^2.12.2
-    geocoding: ^4.0.0
-    geolocator: ^14.0.1
-    fl_chart: ^0.69.0
-    font_awesome_flutter: ^10.7.0
-    get_it: ^9.2.1
-    dio: ^5.8.0+1
-    flutter_riverpod: ^3.3.1
-    flutter_launcher_icons: ^0.14.4
-    readmore: ^3.0.0
-    share_plus: ^12.0.2
-    url_launcher: ^6.2.6
-    syncfusion_flutter_gauges: ^27.1.48
-    google_sign_in: ^6.1.0
-    firebase_core: ^4.0.0
-    dropdown_button2: ^2.3.9
-    firebase_messaging: ^16.0.0
-    awesome_notifications: ^0.11.0
-    flutter_screenutil: ^5.9.3
-    sign_in_with_apple: ^7.0.1
-    flutter_activity_recognition: ^4.0.0
-    pedometer: ^4.0.1
-    lottie:  ^2.7.0  
-    google_fonts: ^6.0.0
-    camera: ^0.10.5
-
-
-  dev_dependencies:
-    flutter_test:
-      sdk: flutter
-    flutter_lints: ^3.0.0
-
-  flutter_icons:
-    android: true
-    ios: true
-    image_path: "assets/images/Fit_First.png"
-
+dependencies:
   flutter:
-    uses-material-design: true
+    sdk: flutter
 
-    assets:
-      - assets/images/
-      - assets/Lottie/
-    #   - images/a_dot_ham.jpeg
+  cupertino_icons: ^1.0.8
+  country_picker: ^2.0.27
+  provider: ^6.0.5
+  numberpicker: ^2.1.2
+  equatable: ^2.0.7
+  http: ^1.4.0
+  flutter_bloc: ^9.1.1
+  bloc: ^9.0.0
+  shared_preferences: ^2.5.3
+  cached_network_image: ^3.4.1
+  flutter_secure_storage: ^10.0.0
+  intl: ^0.19.0              # downgrade — syncfusion needs <0.20.0
+  phone_numbers_parser: ^9.0.3
+  internet_connection_checker: ^3.0.1
+  connectivity_plus: ^6.1.4
+  image_picker: ^1.1.2
+  location: ^8.0.0
+  permission_handler: ^12.0.0+1
+  google_maps_flutter: ^2.12.2
+  geocoding: ^4.0.0
+  geolocator: ^14.0.1
+  fl_chart: ^0.69.0          # fixed — 1.x vector_math conflict tha
+  font_awesome_flutter: ^10.7.0
+  get_it: ^9.2.1
+  dio: ^5.8.0+1
+  flutter_riverpod: ^3.3.1
+  flutter_launcher_icons: ^0.14.4
+  readmore: ^3.0.0
+  share_plus: ^12.0.2
+  url_launcher: ^6.2.6
+  syncfusion_flutter_gauges: ^28.1.38   # upgrade — intl 0.19 compatible
+  google_sign_in: ^6.1.0
+  firebase_core: ^4.0.0
+  dropdown_button2: ^2.3.9
+  firebase_messaging: ^16.0.0
+  awesome_notifications: ^0.11.0
+  flutter_screenutil: ^5.9.3
+  sign_in_with_apple: ^7.0.1
+  flutter_activity_recognition: ^4.0.0
+  pedometer: ^4.0.1
+  lottie: ^2.7.0
+  google_fonts: ^6.0.0
+  camera: ^0.10.5+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/Fit_First.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/Lottie/
 
